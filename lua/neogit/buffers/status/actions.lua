@@ -188,14 +188,19 @@ M.v_discard = function(self)
         git.index.checkout(paths)
       end
 
-      -- TODO: Investigate why, when dropping multiple stashes, the UI doesn't get updated at the end
       if #stashes > 0 then
         for _, stash in ipairs(stashes) do
           git.stash.drop(stash)
         end
       end
 
-      self:dispatch_refresh({ update_diffs = invalidated_diffs }, "v_discard")
+      -- Dropping stashes removes whole entries from the stash section, which a
+      -- partial (update_diffs) refresh won't pick up, so force a full refresh.
+      if #stashes > 0 then
+        self:dispatch_refresh(nil, "v_discard")
+      else
+        self:dispatch_refresh({ update_diffs = invalidated_diffs }, "v_discard")
+      end
     end
   end)
 end
@@ -433,6 +438,68 @@ end
 M.v_remote_popup = function(_self)
   return popups.open("remote")
 end
+
+---@param _self StatusBuffer
+---@return fun(): nil
+M.v_run_popup = function(_self)
+  return popups.open("run")
+end
+
+---@param _self StatusBuffer
+---@return fun(): nil
+M.v_forge_popup = function(_self)
+  return popups.open("forge")
+end
+
+---@param _self StatusBuffer
+---@return fun(): nil
+M.v_patch_popup = function(_self)
+  return popups.open("patch")
+end
+
+---@param self StatusBuffer
+---@return fun(): nil
+M.v_notes_popup = function(self)
+  return popups.open("notes", function(p)
+    local commits = self.buffer.ui:get_commits_in_selection()
+    p { commit = #commits == 1 and commits[1] or nil }
+  end)
+end
+
+---@param _self StatusBuffer
+---@return fun(): nil
+M.v_submodule_popup = function(_self)
+  return popups.open("submodule")
+end
+
+---@param _self StatusBuffer
+---@return fun(): nil
+M.v_clone_popup = function(_self)
+  return popups.open("clone")
+end
+
+---@param self StatusBuffer
+---@return fun(): nil
+M.v_file_dispatch_popup = function(self)
+  return popups.open("file_dispatch", function(p)
+    local paths = self.buffer.ui:get_filepaths_in_selection()
+    p { file = paths and paths[1] }
+  end)
+end
+
+local function simple_popup(name)
+  return function(_self)
+    return popups.open(name)
+  end
+end
+
+M.v_sparse_checkout_popup = simple_popup("sparse_checkout")
+M.v_subtree_popup = simple_popup("subtree")
+M.v_bundle_popup = simple_popup("bundle")
+M.v_shortlog_popup = simple_popup("shortlog")
+M.v_repos_popup = simple_popup("repos")
+M.v_dispatch_popup = simple_popup("dispatch")
+M.v_mergetool_popup = simple_popup("mergetool")
 
 ---@param _self StatusBuffer
 ---@return fun(): nil
@@ -894,7 +961,9 @@ M.n_discard = function(self)
         end
 
         if conflict then
-          -- TODO: https://github.com/magit/magit/blob/28bcd29db547ab73002fb81b05579e4a2e90f048/lisp/magit-apply.el#L515
+          -- NOTE: Magit offers finer-grained conflict handling when discarding a
+          -- section (magit-apply.el, magit-discard-files--resolve); for now we
+          -- require conflicts to be resolved first.
           notification.warn("Resolve conflicts before discarding section.")
           return
         else
@@ -1300,6 +1369,11 @@ M.n_goto_file = function(self)
   return function()
     local item = self.buffer.ui:get_item_under_cursor()
 
+    if item and (item.kind == "pullreq" or item.kind == "issue") then
+      require("neogit.buffers.forge_topic_view").new(item):open()
+      return
+    end
+
     -- Goto FILE
     if item and item.absolute_path then
       if self:has_submodule(item.absolute_path) then
@@ -1489,7 +1563,8 @@ M.n_help_popup = function(self)
     local commit = self.buffer.ui:get_commit_under_cursor()
     local commits = { commit }
 
-    -- TODO: Pass selection here so we can stage/unstage etc stuff
+    -- NOTE: Only the commit under the cursor is passed through; passing the full
+    -- visual selection here would let these popups act on multiple commits at once.
     p {
       branch = { commits = commits },
       cherry_pick = { commits = commits },
@@ -1516,6 +1591,20 @@ M.n_help_popup = function(self)
       pull = {},
       log = {},
       worktree = {},
+      run = {},
+      forge = {},
+      patch = {},
+      submodule = {},
+      clone = {},
+      sparse_checkout = {},
+      subtree = {},
+      bundle = {},
+      shortlog = {},
+      repos = {},
+      dispatch = {},
+      mergetool = {},
+      notes = { commit = commit },
+      file_dispatch = { file = path and path.escaped_path },
     }
   end)
 end
@@ -1525,6 +1614,61 @@ end
 M.n_remote_popup = function(_self)
   return popups.open("remote")
 end
+
+---@param _self StatusBuffer
+---@return fun(): nil
+M.n_run_popup = function(_self)
+  return popups.open("run")
+end
+
+---@param _self StatusBuffer
+---@return fun(): nil
+M.n_forge_popup = function(_self)
+  return popups.open("forge")
+end
+
+---@param _self StatusBuffer
+---@return fun(): nil
+M.n_patch_popup = function(_self)
+  return popups.open("patch")
+end
+
+---@param self StatusBuffer
+---@return fun(): nil
+M.n_notes_popup = function(self)
+  return popups.open("notes", function(p)
+    p { commit = self.buffer.ui:get_commit_under_cursor() }
+  end)
+end
+
+---@param _self StatusBuffer
+---@return fun(): nil
+M.n_submodule_popup = function(_self)
+  return popups.open("submodule")
+end
+
+---@param _self StatusBuffer
+---@return fun(): nil
+M.n_clone_popup = function(_self)
+  return popups.open("clone")
+end
+
+---@param self StatusBuffer
+---@return fun(): nil
+M.n_file_dispatch_popup = function(self)
+  return popups.open("file_dispatch", function(p)
+    local path = self.buffer.ui:get_hunk_or_filename_under_cursor()
+    p { file = path and path.escaped_path }
+  end)
+end
+
+M.n_sparse_checkout_popup = simple_popup("sparse_checkout")
+M.n_subtree_popup = simple_popup("subtree")
+M.n_bundle_popup = simple_popup("bundle")
+M.n_shortlog_popup = simple_popup("shortlog")
+M.n_repos_popup = simple_popup("repos")
+M.n_dispatch_popup = simple_popup("dispatch")
+M.n_mergetool_popup = simple_popup("mergetool")
 
 ---@param _self StatusBuffer
 ---@return fun(): nil
@@ -1656,6 +1800,19 @@ M.n_prev_section = function(self)
     end
 
     self.buffer:win_exec("norm! gg")
+  end
+end
+
+---@param self StatusBuffer
+---@return fun(): nil
+M.n_parent_section = function(self)
+  return function()
+    local section = self.buffer.ui:get_current_section()
+    if section then
+      self.buffer:move_cursor(section.position.row_start + 1)
+    else
+      self.buffer:move_cursor(self.buffer.ui:first_section().first + 1)
+    end
   end
 end
 

@@ -1,5 +1,15 @@
 local Path = require("neogit.lib.path")
 
+local function read_file(path)
+  local lines = {}
+
+  for line in path:iter() do
+    table.insert(lines, line)
+  end
+
+  return table.concat(lines, "\n")
+end
+
 describe("docs", function()
   it("doesn't repeat any tags", function()
     local docs = Path.new(vim.uv.cwd(), "doc", "neogit.txt")
@@ -35,5 +45,35 @@ describe("docs", function()
 
       assert.True(tags[ref])
     end
+  end)
+
+  describe("README installation docs", function()
+    it("documents the supported installation managers", function()
+      local readme = read_file(Path.new(vim.uv.cwd(), "README.md"))
+
+      assert.True(readme:find("### `vim.pack`", 1, true) ~= nil)
+      assert.True(readme:find("### `lazy.nvim`", 1, true) ~= nil)
+      assert.True(readme:find("### `mini.deps`", 1, true) ~= nil)
+      assert.True(readme:find("### `packer.nvim`", 1, true) ~= nil)
+      assert.True(readme:find("### Vim packages", 1, true) ~= nil)
+    end)
+
+    it("keeps vim.pack as the built-in Neovim install example", function()
+      local readme = read_file(Path.new(vim.uv.cwd(), "README.md"))
+
+      assert.True(readme:find("Neovim 0.12+ ships a built-in plugin manager, `vim.pack`", 1, true) ~= nil)
+      assert.True(readme:find("vim.pack.add", 1, true) ~= nil)
+      assert.True(readme:find("https://github.com/NeogitOrg/neogit", 1, true) ~= nil)
+    end)
+
+    it("documents manual and automatic wip snapshots", function()
+      local readme = read_file(Path.new(vim.uv.cwd(), "README.md"))
+
+      assert.True(readme:find("## WIP snapshots", 1, true) ~= nil)
+      assert.True(readme:find("! w", 1, true) ~= nil)
+      assert.True(readme:find("! W", 1, true) ~= nil)
+      assert.True(readme:find("wip = {", 1, true) ~= nil)
+      assert.True(readme:find("enabled = true", 1, true) ~= nil)
+    end)
   end)
 end)

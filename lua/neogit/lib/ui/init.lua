@@ -2,7 +2,7 @@ local Component = require("neogit.lib.ui.component")
 local util = require("neogit.lib.util")
 local Renderer = require("neogit.lib.ui.renderer")
 local Collection = require("neogit.lib.collection")
-local logger = require("neogit.logger") -- TODO: Add logging
+local logger = require("neogit.logger")
 
 ---@class Section
 ---@field items StatusItem[]
@@ -154,18 +154,6 @@ end
 ---@return SelectedHunk[]
 function Ui:item_hunks(item, first_line, last_line, partial)
   local hunks = {}
-
-  -- TODO: Move this to lib.git.diff
-  -- local diff = require("neogit.lib.git").cli.diff.check.call { hidden = true, ignore_error = true }
-  -- local conflict_markers = {}
-  -- if diff.code == 2 then
-  --   for _, out in ipairs(diff.stdout) do
-  --     local line = string.gsub(out, "^" .. item.name .. ":", "")
-  --     if line ~= out and string.match(out, "conflict") then
-  --       table.insert(conflict_markers, tonumber(string.match(line, "%d+")))
-  --     end
-  --   end
-  -- end
 
   if not item.folded and item.diff.hunks then
     for _, h in ipairs(item.diff.hunks) do
@@ -641,7 +629,7 @@ function Ui:_update_on_open(node, attributes, prefix)
   if key then
     prefix = key
 
-    -- TODO: If a hunk is closed, it will be re-opened on update because the on_open callback runs async :\
+    -- NOTE: If a hunk is closed, it will be re-opened on update because the on_open callback runs async :\
     if attributes[prefix] then
       if node.options.on_open and not attributes[prefix].folded then
         node.options.on_open(node, self, prefix)

@@ -126,7 +126,6 @@ function M.list_parsed()
   return output
 end
 
--- TODO: Use in more places
 --- Determines what HEAD's exist in repo, and enumerates them
 M.heads = util.memoize(function()
   local heads = { "HEAD", "ORIG_HEAD", "FETCH_HEAD", "MERGE_HEAD", "CHERRY_PICK_HEAD" }

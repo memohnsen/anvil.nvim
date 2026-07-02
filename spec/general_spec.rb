@@ -3,8 +3,9 @@
 RSpec.describe "general things", :git, :nvim do
   popups = %w[
     bisect branch branch_config cherry_pick commit
-    diff fetch help ignore log merge pull push rebase
-    remote remote_config reset revert stash tag worktree
+    bundle clone diff dispatch fetch file_dispatch forge help ignore log merge mergetool notes
+    patch pull push rebase remote remote_config repos reset revert shortlog sparse_checkout stash
+    subtree submodule tag worktree run
   ]
 
   popups.each do |popup|

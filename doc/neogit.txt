@@ -25,21 +25,34 @@ CONTENTS                                                       *neogit_contents*
        • Bisect                                            |neogit_bisect_popup|
        • Branch                                            |neogit_branch_popup|
        • Branch Config                              |neogit_branch_config_popup|
+       • Bundle                                            |neogit_bundle_popup|
        • Cherry Pick                                  |neogit_cherry_pick_popup|
        • Commit                                            |neogit_commit_popup|
        • Diff                                                |neogit_diff_popup|
+       • Dispatch                                        |neogit_dispatch_popup|
        • Fetch                                              |neogit_fetch_popup|
+       • File Dispatch                              |neogit_file_dispatch_popup|
+       • Forge                                              |neogit_forge_popup|
        • Ignore                                            |neogit_ignore_popup|
        • Log                                                  |neogit_log_popup|
+       • Mergetool                                      |neogit_mergetool_popup|
        • Merge                                              |neogit_merge_popup|
+       • Notes                                              |neogit_notes_popup|
+       • Patch                                              |neogit_patch_popup|
        • Pull                                                |neogit_pull_popup|
        • Push                                                |neogit_push_popup|
        • Rebase                                            |neogit_rebase_popup|
        • Remote                                            |neogit_remote_popup|
        • Remote Config                              |neogit_remote_config_popup|
+       • Repositories                                      |neogit_repos_popup|
        • Reset                                              |neogit_reset_popup|
        • Revert                                            |neogit_revert_popup|
+       • Run                                                  |neogit_run_popup|
+       • Shortlog                                      |neogit_shortlog_popup|
+       • Sparse Checkout                        |neogit_sparse_checkout_popup|
        • Stash                                              |neogit_stash_popup|
+       • Submodule                                      |neogit_submodule_popup|
+       • Subtree                                          |neogit_subtree_popup|
        • Tag                                                  |neogit_tag_popup|
        • Worktree                                        |neogit_worktree_popup|
     9. Buffers                                                  *neogit_buffers*
@@ -50,12 +63,16 @@ CONTENTS                                                       *neogit_contents*
        • Refs                                               |neogit_refs_buffer|
        • Commit                                           |neogit_commit_buffer|
        • Rebase Todo                                 |neogit_rebase_todo_buffer|
+       • Blame                                             |neogit_blame_buffer|
 
 ==============================================================================
 1. Intro                                                          *neogit_intro*
 
-Neogit is a git client for Neovim built as a clone of the popular emacs git
-client 'Magit'.
+Neogit is a git + GitHub client for Neovim, built as a full 1:1 rewrite of the
+popular emacs git client 'Magit' and its GitHub integration 'Forge'. It is a
+fork of Neogit (https://github.com/NeogitOrg/neogit), with a forge layer
+inspired by octo.nvim (https://github.com/pwntester/octo.nvim). See
+|neogit_forge_popup| for the GitHub integration.
 
 "Magit is a complete text-based user interface to Git. It fills the glaring
 gap between the Git command-line interface and various GUIs, letting you
@@ -361,6 +378,16 @@ to Neovim users.
         folded = true,
         hidden = false,
         },
+        -- Forge: open pull requests (synced via the forge popup, "N f")
+        pullreqs = {
+        folded = true,
+        hidden = false,
+        },
+        -- Forge: open issues
+        issues = {
+        folded = true,
+        hidden = false,
+        },
     },
     }
     >
@@ -462,12 +489,12 @@ The following mappings can all be customized via the setup function.
         ["M"] = "RemotePopup",
         ["P"] = "PushPopup",
         ["X"] = "ResetPopup",
-        ["Z"] = "StashPopup",
+        ["Z"] = "WorktreePopup",
+        ["z"] = "StashPopup",
         ["i"] = "IgnorePopup",
         ["t"] = "TagPopup",
         ["b"] = "BranchPopup",
         ["B"] = "BisectPopup",
-        ["w"] = "WorktreePopup",
         ["c"] = "CommitPopup",
         ["f"] = "FetchPopup",
         ["l"] = "LogPopup",
@@ -475,6 +502,14 @@ The following mappings can all be customized via the setup function.
         ["p"] = "PullPopup",
         ["r"] = "RebasePopup",
         ["v"] = "RevertPopup",
+        ["!"] = "RunPopup",
+        ["N"] = "ForgePopup",
+        ["W"] = "PatchPopup",
+        ["T"] = "NotesPopup",
+        ["O"] = "SubmodulePopup",
+        ["C"] = "ClonePopup",
+        ["h"] = "DispatchPopup",
+        ["e"] = "MergetoolPopup",
       }
 
       status = {
@@ -532,6 +567,56 @@ The following mappings can all be customized via the setup function.
                                                                  *:NeogitCommit*
 :NeogitCommit           Opens the commit view for the specified SHA, or `HEAD`
                         if left blank.
+
+                                                                 *:Neogit-forge*
+:Neogit forge           Opens the forge popup. See |neogit_forge_popup|.
+
+                                                                   *:Neogit-run*
+:Neogit run             Opens the run popup for arbitrary git/shell commands.
+                        See |neogit_run_popup|.
+
+                                                                 *:Neogit-blame*
+:Neogit blame           Opens the blame view for the current file.
+                        See |neogit_blame_buffer|.
+
+                                                                 *:Neogit-patch*
+:Neogit patch           Opens the patch/am popup. See |neogit_patch_popup|.
+
+                                                                  *:Neogit-notes*
+:Neogit notes           Opens the git-notes popup. See |neogit_notes_popup|.
+
+                                                              *:Neogit-submodule*
+:Neogit submodule       Opens the submodule popup. See |neogit_submodule_popup|.
+
+                                                                  *:Neogit-clone*
+:Neogit clone           Opens the clone popup.
+
+                                                          *:Neogit-file_dispatch*
+:Neogit file_dispatch   Opens the file-oriented dispatch popup.
+                        See |neogit_file_dispatch_popup|.
+
+                                                        *:Neogit-sparse_checkout*
+:Neogit sparse_checkout Opens the sparse-checkout popup.
+                        See |neogit_sparse_checkout_popup|.
+
+                                                                *:Neogit-subtree*
+:Neogit subtree         Opens the subtree popup. See |neogit_subtree_popup|.
+
+                                                                 *:Neogit-bundle*
+:Neogit bundle          Opens the bundle popup. See |neogit_bundle_popup|.
+
+                                                               *:Neogit-shortlog*
+:Neogit shortlog        Opens the shortlog popup. See |neogit_shortlog_popup|.
+
+                                                                  *:Neogit-repos*
+:Neogit repos           Opens the repository list popup. See |neogit_repos_popup|.
+
+                                                               *:Neogit-dispatch*
+:Neogit dispatch        Opens the global dispatch popup.
+                        See |neogit_dispatch_popup|.
+
+                                                              *:Neogit-mergetool*
+:Neogit mergetool       Opens the mergetool popup. See |neogit_mergetool_popup|.
 
 ==============================================================================
 4. Events                                                        *neogit_events*
@@ -692,6 +777,25 @@ The following events are emitted by Neogit:
         row_start: int (first line of hunk in the buffer)
         row_end: int (last line of hunk in the buffer)
         header: string (diff header)
+<
+• `NeogitForgePulled`
+  When: Forge topics (pull requests + issues) were synced from GitHub
+  Data: `{}`
+
+• `NeogitForgePullRequestCheckout`
+  When: A pull request branch was checked out via the forge popup
+  Data: >
+    {
+      number: number
+    }
+<
+• `NeogitUserCommandComplete`
+  When: A command started from the run popup finished
+  Data: >
+    {
+      cmd: string,
+      cwd: string
+    }
 <
 ==============================================================================
 5. Highlights                                                *neogit_highlights*
@@ -1563,6 +1667,86 @@ Actions:                                            *neogit_fetch_popup_actions*
     See |neogit_branch_config_popup|.
 
 ==============================================================================
+Forge Popup                                                 *neogit_forge_popup*
+
+The forge popup integrates GitHub into Neogit, the way Forge integrates with
+Magit. Requires the GitHub CLI (`gh`), authenticated via `gh auth login`, and
+a GitHub remote named "origin" or "upstream". Default mapping: `N`.
+
+Topics (pull requests, issues, and discussions) are kept in a local store under
+`stdpath("data")/neogit/forge/` and rendered from disk — the network is only
+used when syncing. If `kkharji/sqlite.lua` is installed, Neogit uses SQLite;
+otherwise it falls back to JSON files. After a sync, "Pull requests" and
+"Issues" sections appear in the status buffer (see `sections.pullreqs` and
+`sections.issues` in the setup table). Discussions are synced too, but
+`sections.discussions.hidden` defaults to true.
+
+Actions:                                            *neogit_forge_popup_actions*
+  • Pull topics (f f)                                         *neogit_forge_pull*
+    Fetches open pull requests, issues, and discussions from GitHub into the
+    local store, then refreshes the status buffer. Emits `NeogitForgePulled`.
+
+  • Create issue (c i)                                *neogit_forge_create_issue*
+    Opens the browser on the new-issue page for the repository.
+
+  • Create pull request (c p)                      *neogit_forge_create_pullreq*
+    Runs `gh pr create --web`.
+
+  • Browse issues / pull requests / repo / branch (b I, b P, b r, b b)
+    Opens the corresponding page on the web.               *neogit_forge_browse*
+
+Topic buffers render stored descriptions, comments, and pull-request reviews.
+Press `f` inside a topic buffer to pull fresh detail for that topic into the
+local store, then re-render the buffer. Issue and pull request topic buffers
+also support `c` comment with a multi-line post editor, `e` edit title, `b`
+edit body in a multi-line editor, `l` add labels, `a` add assignees, `m` set
+milestone, `+` add a reaction, and `s` toggle open/closed state through `gh`;
+pull request topic buffers additionally support `r` add reviewers, `R` remove
+reviewers, `V` queue a pending review comment, `A` approve, `v` submit a
+comment review, and `X` request changes. Successful edits refresh the local
+topic detail.
+Local Forge topic marks are available with `M` mark read, `u` mark unread,
+`*` save or unsave, and `d` mark done; list and status buffers show `U`/`S`/`D`
+markers.
+Topic list buffers default to active topics; use `A` all, `U` unread, `S`
+saved, `D` done, `O` open, `C` closed, `a` author, `r` assignee, `l` label,
+and `m` milestone filters.
+Pull request topic detail also renders inline review threads with file/line
+context, diff hunks, resolution state, and comments. Use `i` to reply to a
+numbered review thread, `x` to resolve it, and `U` to mark it unresolved.
+Comment and reply editors submit on write or the commit-editor submit mapping.
+Use `C` to react to a numbered topic comment and `I` to react to a numbered
+review-thread comment. Suggested changes in review comments are listed in the
+topic buffer; use `S` to apply a numbered suggestion to the local worktree.
+
+  • List topics (l t)                                        *neogit_forge_list*
+    Select an issue or pull request with a picker; opens the selection in the
+    browser. Pressing <cr> on a status-buffer topic opens a local topic buffer.
+
+  • List notifications (l n)                    *neogit_forge_notifications*
+    Opens the notification list buffer. In that buffer, use `r` to mark read,
+    `u` to mark unread, `s` to save or unsave, `d` to mark done, and `o` to
+    open the notification target. Use `g` to refresh, and `A`/`U`/`S`/`D` to
+    filter all/unread/saved/done notifications. Read/unread/save/done state is
+    stored locally; mark-read also updates GitHub when `gh` is available and
+    authenticated.
+    Notification polling is opt-in with:
+>
+      require("neogit").setup({
+        forge = {
+          notifications = {
+            poll = true,
+            interval = 300000,
+          },
+        },
+      })
+<
+
+  • Checkout pull request (b f)                 *neogit_forge_checkout_pullreq*
+    Select an open pull request and check out its branch via
+    `gh pr checkout`. Emits `NeogitForgePullRequestCheckout`.
+
+==============================================================================
 Log Popup                                                     *neogit_log_popup*
 
 (TODO)
@@ -2058,6 +2242,154 @@ Actions:                                            *neogit_reset_popup_actions*
     that fails, tries `git reset` instead.
 
 ==============================================================================
+Run Popup                                                     *neogit_run_popup*
+
+Run an arbitrary git or shell command with the repository as context, magit's
+`!` popup. Output is streamed to the process console, and the status buffer
+refreshes when the command finishes. Commands are remembered across sessions
+and offered as completion. The popup also saves Magit-style WIP refs under
+`refs/wip/`. Default mapping: `!`.
+
+Actions:                                              *neogit_run_popup_actions*
+  • Git command in worktree root (!)                       *neogit_run_git_root*
+    Prompts for arguments to `git` and runs them from the root of the
+    worktree.
+
+  • Git command in current directory (p)                    *neogit_run_git_cwd*
+    Same, but runs from the current working directory.
+
+  • Shell command in worktree root (s)                   *neogit_run_shell_root*
+    Prompts for an arbitrary shell command and runs it from the root of the
+    worktree.
+
+  • Shell command in current directory (S)                *neogit_run_shell_cwd*
+    Same, but runs from the current working directory.
+
+  • Save WIP snapshot (w)                             *neogit_run_wip_snapshot*
+    Saves dirty worktree state to `refs/wip/worktree/<branch>` without cleaning
+    or stashing the worktree.
+
+  • Save index WIP snapshot (W)                 *neogit_run_wip_snapshot_index*
+    Saves staged state to `refs/wip/index/<branch>` without unstaging it.
+
+  • List/apply WIP snapshots (l)                       *neogit_run_wip_list*
+    Opens a WIP snapshot list buffer. In that buffer, press <cr> or `a` to
+    apply the selected worktree or index snapshot.
+
+Emits `NeogitUserCommandComplete` when the command finishes.
+
+Automatic WIP snapshots are opt-in:                         *neogit_wip_auto*
+>
+  require("neogit").setup({
+    wip = {
+      enabled = true,
+      before = true,
+      after = false,
+    },
+  })
+<
+When enabled, Neogit writes WIP refs around mutating git operations it runs.
+`before` captures state before the operation starts. `after` can additionally
+capture the successful result.
+
+==============================================================================
+Patch Popup                                                 *neogit_patch_popup*
+
+Commands for `git format-patch`, `git apply`, and `git am`.
+
+Actions:                                            *neogit_patch_popup_actions*
+  • Format patch (w, W)
+  • Apply patch (a)
+  • Apply mailbox (m)
+  • Continue / skip / abort an in-progress `git am` (c, s, A)
+
+==============================================================================
+Notes Popup                                                 *neogit_notes_popup*
+
+Commands for `git notes` on the selected commit or a prompted revision.
+
+Actions:                                            *neogit_notes_popup_actions*
+  • Edit, add, append, show, or remove a note (e, a, A, s, r)
+  • Prune or merge notes (p, m)
+
+==============================================================================
+Submodule Popup                                         *neogit_submodule_popup*
+
+Commands for common `git submodule` workflows.
+
+Actions:                                        *neogit_submodule_popup_actions*
+  • Add, init, update, sync, or deinit submodules (a, i, u, s, d)
+  • Show submodule status or run foreach (l, f)
+  • Open a submodule list buffer (L); use `u`, `s`, or `d` there to update,
+    sync, or deinit the selected submodule.
+
+==============================================================================
+File Dispatch Popup                                  *neogit_file_dispatch_popup*
+
+File-oriented commands for the current buffer path.
+
+Actions:                                     *neogit_file_dispatch_popup_actions*
+  • Stage, unstage, diff, log, or blame the current file (s, u, d, l, b)
+
+==============================================================================
+Sparse Checkout Popup                          *neogit_sparse_checkout_popup*
+
+Commands for `git sparse-checkout`.
+
+Actions:                                  *neogit_sparse_checkout_popup_actions*
+  • Init, set, add, list, disable, or reapply sparse checkout (i, s, a, l, d, r)
+
+==============================================================================
+Subtree Popup                                           *neogit_subtree_popup*
+
+Commands for `git subtree`.
+
+Actions:                                          *neogit_subtree_popup_actions*
+  • Add, pull, push, or split a subtree (a, p, P, s)
+
+==============================================================================
+Bundle Popup                                             *neogit_bundle_popup*
+
+Commands for `git bundle`.
+
+Actions:                                            *neogit_bundle_popup_actions*
+  • Create, verify, list heads, or unbundle a bundle file (c, v, l, u)
+
+==============================================================================
+Shortlog Popup                                         *neogit_shortlog_popup*
+
+Commands for `git shortlog`.
+
+Actions:                                          *neogit_shortlog_popup_actions*
+  • Run shortlog for HEAD, a prompted revision, or all refs (s, r, a)
+
+==============================================================================
+Repos Popup                                               *neogit_repos_popup*
+
+Open a list buffer of repositories under a prompted root directory.
+
+Actions:                                            *neogit_repos_popup_actions*
+  • List repositories (l)
+
+==============================================================================
+Dispatch Popup                                         *neogit_dispatch_popup*
+
+Global command dispatcher for opening common Neogit popups.
+
+Actions:                                        *neogit_dispatch_popup_actions*
+  • Open status, log, refs, reflog, commit, branch, stash, run, forge, patch,
+    submodule, remote, or worktree commands.
+
+==============================================================================
+Mergetool Popup                                       *neogit_mergetool_popup*
+
+Commands for resolving conflicts via `git mergetool`.
+
+Actions:                                      *neogit_mergetool_popup_actions*
+  • Run mergetool, list unmerged files, or continue after conflict resolution
+    (m, g, c)
+
+==============================================================================
 Stash Popup                                                 *neogit_stash_popup*
 
 The stash popup actions will affect the current index (staged changes) and the
@@ -2236,14 +2568,18 @@ working tree and index. It is opened via |:Neogit| or
 
   • `<tab>`              Toggle folding for the item at point.
   • `<cr>`               Open the file at point in the editor.
+  • `n` / `p` / `^`      Jump to next, previous, or parent/current section.
+  • `1`..`4`, `M-1`..`M-4`
+                         Show section visibility levels 1 through 4.
   • `{` / `}`            Jump to previous / next hunk header.
   • `[c` / `]c`          Scroll the file preview up / down.
 
   Popup shortcuts (default keys):
-      `A` Cherry-pick, `b` Branch, `B` Bisect, `c` Commit, `d` Diff,
-      `f` Fetch, `i` Ignore, `l` Log, `L` Margin, `m` Merge, `p` Pull,
-      `P` Push, `r` Rebase, `M` Remote, `X` Reset, `v` Revert, `t` Tag,
-      `w` Worktree, `Z` Stash.
+      `A` Cherry-pick, `b` Branch, `B` Bisect, `c` Commit, `C` Clone,
+      `d` Diff, `e` Mergetool, `f` Fetch, `h` Dispatch, `i` Ignore, `l` Log,
+      `L` Margin, `m` Merge, `O` Submodule, `p` Pull, `P` Push,
+      `r` Rebase, `M` Remote, `T` Notes, `W` Patch, `X` Reset,
+      `v` Revert, `t` Tag, `z` Stash, `Z` Worktree.
 
 Untracked Files                                 *neogit_status_buffer_untracked*
   Neogit respects status.showUntrackedFiles. It can be set to "no" to hide
@@ -2349,8 +2685,15 @@ Mappings (normal mode):
 
   • Popup shortcuts honour |neogit_setup_mappings|, default keys:
       - `A` Cherry-pick, `b` Branch, `B` Bisect, `c` Commit, `d` Diff,
-        `f` Fetch, `i` Ignore, `l` Log, `m` Merge, `p` Pull, `P` Push,
-        `r` Rebase, `t` Tag, `v` Revert, `w` Worktree, `X` Reset, `Z` Stash.
+        `C` Clone, `e` Mergetool, `f` Fetch, `h` Dispatch, `i` Ignore,
+        `l` Log, `m` Merge, `N` Forge, `O` Submodule, `p` Pull, `P` Push,
+        `r` Rebase, `T` Notes, `t` Tag, `v` Revert, `W` Patch,
+        `X` Reset, `z` Stash, `Z` Worktree, `!` Run.
+
+  • Popup transient controls:
+      - `<C-x>s` Save current popup arguments as defaults.
+      - `<C-x>p` Cycle previous argument histories for the popup.
+      - `<C-x>r` Reset saved defaults for the popup.
 
 ==============================================================================
 Refs Buffer                                                 *neogit_refs_buffer*
@@ -2373,6 +2716,23 @@ The following keys, in normal mode, will act on the commit under the cursor:
 • `x`    Insert command to execute
 • `b`    Insert breakpoint
 • `<cr>` Open current commit in Commit Buffer
+
+==============================================================================
+Blame Buffer                                             *neogit_blame_buffer*
+
+Opened with `:Neogit blame` from a file buffer. Shows the file with a heading
+above each blame hunk: abbreviated sha, author, relative date and commit
+summary, in the style of magit-blame. Uncommitted lines are grouped under an
+"Uncommitted changes" heading.
+
+The following keys are available in the blame buffer:
+• `<cr>`  Open the hunk's commit in the Commit Buffer
+• `b`/`B` Blame from blame: re-blame the file at the commit *before* the
+          hunk's commit (rename-aware)
+• `n`     Jump to next hunk heading
+• `p`     Jump to previous hunk heading
+• `Y`     Yank the hunk's full sha (uses the status `YankSelected` mapping)
+• `q`/`<esc>` Close, returning to the original file and line
 
 ==============================================================================
 Popup Builder                                             *neogit_popup_builder*

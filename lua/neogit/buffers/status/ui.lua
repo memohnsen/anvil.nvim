@@ -347,6 +347,31 @@ local SectionItemFile = function(section, config)
   end)
 end
 
+local SectionItemForgeTopic = Component.new(function(item)
+  local prefix = item.kind == "pullreq" and "PR" or item.kind == "discussion" and "D" or "#"
+  local marks = (item.unread and "U" or " ") .. (item.saved and "S" or " ") .. (item.done and "D" or " ")
+  return row({
+    text.highlight("NeogitSubtleText")(marks),
+    text(" "),
+    text.highlight("NeogitBranch")(("%s%d"):format(prefix, item.number)),
+    text(" "),
+    text(item.title or ""),
+    text.highlight("NeogitSubtleText")(item.draft and " (draft)" or ""),
+  }, { yankable = item.url, url = item.url, item = item })
+end)
+
+local SectionItemWip = Component.new(function(item)
+  local name = (item.ref or ""):gsub("^refs/wip/", "")
+  return row({
+    text.highlight("NeogitObjectId")(item.oid or ""),
+    text(" "),
+    text.highlight("NeogitBranch")(name),
+    text.highlight("NeogitSubtleText")(item.date and (" " .. item.date) or ""),
+    text(" "),
+    text(item.message or ""),
+  }, { yankable = item.ref, oid = item.ref, item = item })
+end)
+
 local SectionItemStash = Component.new(function(item)
   local name = ("stash@{%s}"):format(item.idx)
   return row({
@@ -471,7 +496,7 @@ local SectionItemCommit = Component.new(function(item)
         if config.values.log_date_format == nil then
           -- we get the unix date to be able to convert the date to the local timezone
           date = os.date("%Y-%m-%d %H:%M", item.commit.unix_date)
-          date_width = 16 -- TODO: what should the width be here?
+          date_width = 16 -- width of "YYYY-MM-DD HH:MM"
         else
           date = item.commit.log_date
           date_width = 16
@@ -658,6 +683,34 @@ function M.Status(state, config)
   local show_recent = #state.recent.items > 0
     and not config.sections.recent.hidden
 
+  local wip_config = config.sections.wip or { folded = true, hidden = false }
+  local show_wip = #state.wip.items > 0
+    and not wip_config.hidden
+
+  local forge_topics = { pullreqs = {}, issues = {}, discussions = {} }
+  do
+    local ok, forge = pcall(require, "neogit.forge")
+    if ok then
+      local topics_ok, topics = pcall(forge.topics)
+      if topics_ok and topics then
+        forge_topics = topics
+      end
+    end
+  end
+
+  local pullreqs_config = config.sections.pullreqs or { folded = true, hidden = false }
+  local issues_config = config.sections.issues or { folded = true, hidden = false }
+  local discussions_config = config.sections.discussions or { folded = true, hidden = true }
+
+  local show_pullreqs = #forge_topics.pullreqs > 0
+    and not pullreqs_config.hidden
+
+  local show_issues = #forge_topics.issues > 0
+    and not issues_config.hidden
+
+  local show_discussions = #forge_topics.discussions > 0
+    and not discussions_config.hidden
+
   return {
     List {
       items = {
@@ -784,6 +837,14 @@ function M.Status(state, config)
           folded = config.sections.stashes.folded,
           name = "stashes",
         },
+        show_wip and Section {
+          title = SectionTitle { title = "WIP snapshots", highlight = "NeogitSectionHeader" },
+          count = true,
+          render = SectionItemWip,
+          items = state.wip.items,
+          folded = wip_config.folded,
+          name = "wip",
+        },
         show_upstream_unmerged and Section {
           title = SectionTitleRemote {
             title = "Unmerged into",
@@ -839,6 +900,30 @@ function M.Status(state, config)
           items = state.pushRemote.unpulled.items,
           folded = config.sections.unpulled_pushRemote.folded,
           name = "pushRemote_unpulled",
+        },
+        show_pullreqs and Section {
+          title = SectionTitle { title = "Pull requests", highlight = "NeogitSectionHeader" },
+          count = true,
+          render = SectionItemForgeTopic,
+          items = forge_topics.pullreqs,
+          folded = pullreqs_config.folded,
+          name = "pullreqs",
+        },
+        show_issues and Section {
+          title = SectionTitle { title = "Issues", highlight = "NeogitSectionHeader" },
+          count = true,
+          render = SectionItemForgeTopic,
+          items = forge_topics.issues,
+          folded = issues_config.folded,
+          name = "issues",
+        },
+        show_discussions and Section {
+          title = SectionTitle { title = "Discussions", highlight = "NeogitSectionHeader" },
+          count = true,
+          render = SectionItemForgeTopic,
+          items = forge_topics.discussions,
+          folded = discussions_config.folded,
+          name = "discussions",
         },
       },
     },

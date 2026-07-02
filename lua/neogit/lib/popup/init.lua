@@ -93,6 +93,131 @@ function M:to_cli()
   return table.concat(self:get_arguments(), " ")
 end
 
+---@param arg PopupOption|PopupSwitch
+---@return string|nil
+local function state_key_for_arg(arg)
+  if arg.type == "switch" and arg.options then
+    return arg.cli_suffix
+  elseif arg.type == "switch" or arg.type == "option" then
+    return arg.cli
+  end
+end
+
+---@return table
+function M:argument_snapshot()
+  local snapshot = {}
+
+  for _, arg in ipairs(self.state.args) do
+    if arg.id and (arg.type == "switch" or arg.type == "option") then
+      snapshot[arg.id] = {
+        type = arg.type,
+        cli = arg.cli,
+        value = arg.value,
+        enabled = arg.enabled,
+      }
+    end
+  end
+
+  return snapshot
+end
+
+---@param snapshot table
+function M:apply_argument_snapshot(snapshot)
+  if type(snapshot) ~= "table" then
+    return
+  end
+
+  for _, arg in ipairs(self.state.args) do
+    local saved = arg.id and snapshot[arg.id]
+    if saved then
+      if arg.type == "switch" then
+        arg.cli = saved.cli or arg.cli_base
+        arg.value = saved.value or arg.cli
+        arg.enabled = saved.enabled == true
+      elseif arg.type == "option" then
+        arg.value = saved.value or ""
+      end
+    end
+  end
+end
+
+function M:save_defaults()
+  for _, arg in ipairs(self.state.args) do
+    local key = state_key_for_arg(arg)
+    if key then
+      if arg.type == "switch" and arg.options then
+        state.set({ self.state.name, key }, arg.enabled and arg.cli or "")
+      elseif arg.type == "switch" then
+        state.set({ self.state.name, key }, arg.enabled == true)
+      elseif arg.type == "option" then
+        state.set({ self.state.name, key }, arg.value or "")
+      end
+    end
+  end
+
+  notification.info(("Saved defaults for %s"):format(self.state.name))
+end
+
+function M:reset_defaults()
+  for _, arg in ipairs(self.state.args) do
+    local key = state_key_for_arg(arg)
+    if key then
+      state.unset({ self.state.name, key })
+    end
+
+    if arg.type == "switch" then
+      arg.cli = arg.cli_base
+      arg.value = arg.cli
+      arg.enabled = false
+    elseif arg.type == "option" then
+      arg.value = tostring(arg.default or "")
+    end
+  end
+
+  notification.info(("Reset defaults for %s"):format(self.state.name))
+end
+
+local function snapshots_equal(a_snapshot, b_snapshot)
+  return vim.deep_equal(a_snapshot, b_snapshot)
+end
+
+function M:record_history()
+  local snapshot = self:argument_snapshot()
+  local history = state.get({ self.state.name, "history" }, {})
+  if type(history) ~= "table" then
+    history = {}
+  end
+
+  if #history == 0 or not snapshots_equal(history[1], snapshot) then
+    table.insert(history, 1, snapshot)
+  end
+
+  while #history > 20 do
+    table.remove(history)
+  end
+
+  state.set({ self.state.name, "history" }, history)
+  state.set({ self.state.name, "history-index" }, 1)
+end
+
+function M:restore_previous_history()
+  local history = state.get({ self.state.name, "history" }, {})
+  if type(history) ~= "table" or #history == 0 then
+    notification.warn(("No history for %s"):format(self.state.name))
+    return
+  end
+
+  local index = tonumber(state.get({ self.state.name, "history-index" }, 1)) or 1
+  index = index + 1
+  if index > #history then
+    index = 1
+  end
+
+  self:apply_argument_snapshot(history[index])
+  state.set({ self.state.name, "history-index" }, index)
+  notification.info(("Restored history %d/%d for %s"):format(index, #history, self.state.name))
+end
+
 -- Closes the popup buffer
 function M:close()
   if self.buffer then
@@ -316,6 +441,18 @@ function M:mappings()
 
         self:refresh()
       end),
+      ["<C-x>s"] = function()
+        self:save_defaults()
+        self:refresh()
+      end,
+      ["<C-x>p"] = function()
+        self:restore_previous_history()
+        self:refresh()
+      end,
+      ["<C-x>r"] = function()
+        self:reset_defaults()
+        self:refresh()
+      end,
     },
   }
 
@@ -374,6 +511,7 @@ function M:mappings()
             end
 
             local permit = M.__lock:acquire()
+            self:record_history()
             local ok, err = pcall(action.callback, self)
             permit:forget()
 

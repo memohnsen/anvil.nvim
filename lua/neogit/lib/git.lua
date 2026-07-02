@@ -29,6 +29,7 @@
 ---@field tag         NeogitGitTag
 ---@field worktree    NeogitGitWorktree
 ---@field hooks       NeogitGitHooks
+---@field wip         NeogitGitWip
 local Git = {}
 
 setmetatable(Git, {

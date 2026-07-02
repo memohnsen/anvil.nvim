@@ -104,9 +104,8 @@ local M = {}
 -- touches the span S -> V it does not overlap it, so
 -- figuratively we have S -> V <- V which is fine
 --
--- TODO:
--- FIXME: need to test if we handle two bi-connectors in succession
---        correctly
+-- NOTE: the handling of two bi-connectors in succession is not covered by tests
+--       and may need verification
 --
 ---@param commit_row I.Row
 ---@param connector_row I.Row
@@ -298,7 +297,7 @@ local function resolve_bi_crossing(prev_commit_row, prev_connector_row, commit_r
   --
   -- can think of this as scooting the cell to the left
   -- when the cell was just introduced
-  -- TODO: implement this at some point
+  -- NOTE: this left-scoot optimization is not yet implemented
   -- for k, cell in ipairs(this_row.cells) do
   --   if cell.commit and not prev_row.cells[k].commit and not this_row.cells[k - 2] then
   --   end
@@ -766,7 +765,7 @@ function M.build(commits, color)
       for j = 1, #row.cells do
         local cell = row.cells[j]
         if cell.connector then
-          cell.symbol = cell.connector -- TODO: connector and symbol should not be duplicating data?
+          cell.symbol = cell.connector -- NOTE: connector and symbol duplicate data here
         else
           assert(cell.commit, "assertion failed")
           cell.symbol = commit_cell_symb(cell)
@@ -806,8 +805,8 @@ function M.build(commits, color)
           for k = j + 1, #row.cells do
             local rcell = row.cells[k]
 
-            -- TODO: would be nice with a better way than this hacky method of
-            --       to figure out where our vertical branch is
+            -- NOTE: this is a heuristic for locating the vertical branch and
+            --       could be made more robust
             local continuations = {
               GCLD,
               GCLU,
@@ -1020,8 +1019,8 @@ function M.build(commits, color)
     -- these are where we have multiple connector commit hashes
     -- for a single merge child, that is, more than one connector
     --
-    -- TODO: this method presented here is probably universal and covers
-    --       also for the previously computed intervals ... two birds one stone?
+    -- NOTE: this method is probably universal and may also cover the
+    --       previously computed intervals
     do
       local low = #row.cells
       local high = 1

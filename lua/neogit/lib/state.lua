@@ -105,6 +105,18 @@ function M.set(key, value)
   end
 end
 
+---Unset option and write to disk
+---@param key string[]
+function M.unset(key)
+  if not M.enabled() then
+    return
+  end
+
+  local cache_key = gen_key(key)
+  M.state[cache_key] = nil
+  M.write()
+end
+
 ---Get option. If value isn't set, return provided default.
 ---@param key table
 ---@param default any

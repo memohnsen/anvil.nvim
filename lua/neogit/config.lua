@@ -154,6 +154,8 @@ end
 ---@field rebase NeogitConfigSection|nil
 ---@field sequencer NeogitConfigSection|nil
 ---@field bisect NeogitConfigSection|nil
+---@field wip NeogitConfigSection|nil
+---@field discussions NeogitConfigSection|nil
 
 ---@class HighlightOptions
 ---@field italic?     boolean
@@ -240,6 +242,7 @@ end
 ---| "PeekDown"
 ---| "NextSection"
 ---| "PreviousSection"
+---| "ParentSection"
 ---| false
 ---| fun()
 
@@ -264,6 +267,20 @@ end
 ---| "RemotePopup"
 ---| "TagPopup"
 ---| "WorktreePopup"
+---| "RunPopup"
+---| "ForgePopup"
+---| "PatchPopup"
+---| "NotesPopup"
+---| "SubmodulePopup"
+---| "ClonePopup"
+---| "FileDispatchPopup"
+---| "SparseCheckoutPopup"
+---| "SubtreePopup"
+---| "BundlePopup"
+---| "ShortlogPopup"
+---| "ReposPopup"
+---| "DispatchPopup"
+---| "MergetoolPopup"
 ---| false
 
 ---@alias NeogitConfigMappingsRebaseEditor
@@ -347,6 +364,18 @@ end
 ---@field commit? string
 ---@field tree? string
 
+---@class NeogitConfigWip
+---@field enabled boolean Automatically write WIP refs around mutating Neogit git operations
+---@field before boolean Snapshot before mutating operations
+---@field after boolean Snapshot after successful mutating operations
+
+---@class NeogitConfigForgeNotifications
+---@field poll boolean Automatically poll GitHub notifications
+---@field interval integer Poll interval in milliseconds
+
+---@class NeogitConfigForge
+---@field notifications NeogitConfigForgeNotifications Forge notification options
+
 ---@class NeogitConfig Neogit configuration settings
 ---@field filewatcher? NeogitFilewatcherConfig Values for filewatcher
 ---@field graph_style? NeogitGraphStyle Style for graph
@@ -360,6 +389,8 @@ end
 ---@field prompt_force_push? boolean Offer to force push when branches diverge
 ---@field prompt_amend_commit? boolean Request confirmation when amending already published commits
 ---@field git_services? NeogitConfigGitService[] Templates to use when opening a pull request for a branch, or commit
+---@field wip? NeogitConfigWip Work-in-progress snapshot options
+---@field forge? NeogitConfigForge Forge options
 ---@field fetch_after_checkout? boolean Perform a fetch if the newly checked out branch has an upstream or pushRemote set
 ---@field telescope_sorter? function The sorter telescope will use
 ---@field process_spinner? boolean Hide/Show the process spinner
@@ -451,6 +482,17 @@ function M.get_default_values()
         pull_request = "https://${host}/${owner}/${repository}/compare/${branch_name}",
         commit = "https://${host}/${owner}/${repository}/commit/${oid}",
         tree = "https://${host}/${owner}/${repository}/src/branch/${branch_name}",
+      },
+    },
+    wip = {
+      enabled = false,
+      before = true,
+      after = false,
+    },
+    forge = {
+      notifications = {
+        poll = false,
+        interval = 300000,
       },
     },
     highlight = {},
@@ -607,6 +649,22 @@ function M.get_default_values()
         folded = true,
         hidden = false,
       },
+      pullreqs = {
+        folded = true,
+        hidden = false,
+      },
+      issues = {
+        folded = true,
+        hidden = false,
+      },
+      discussions = {
+        folded = true,
+        hidden = true,
+      },
+      wip = {
+        folded = true,
+        hidden = false,
+      },
     },
     ignored_settings = {},
     mappings = {
@@ -678,12 +736,12 @@ function M.get_default_values()
         ["M"] = "RemotePopup",
         ["P"] = "PushPopup",
         ["X"] = "ResetPopup",
-        ["Z"] = "StashPopup",
+        ["Z"] = "WorktreePopup",
+        ["z"] = "StashPopup",
         ["i"] = "IgnorePopup",
         ["t"] = "TagPopup",
         ["b"] = "BranchPopup",
         ["B"] = "BisectPopup",
-        ["w"] = "WorktreePopup",
         ["c"] = "CommitPopup",
         ["f"] = "FetchPopup",
         ["l"] = "LogPopup",
@@ -692,6 +750,14 @@ function M.get_default_values()
         ["p"] = "PullPopup",
         ["r"] = "RebasePopup",
         ["v"] = "RevertPopup",
+        ["!"] = "RunPopup",
+        ["N"] = "ForgePopup",
+        ["W"] = "PatchPopup",
+        ["T"] = "NotesPopup",
+        ["O"] = "SubmodulePopup",
+        ["C"] = "ClonePopup",
+        ["h"] = "DispatchPopup",
+        ["e"] = "MergetoolPopup",
       },
       status = {
         ["j"] = "MoveDown",
@@ -703,6 +769,10 @@ function M.get_default_values()
         ["2"] = "Depth2",
         ["3"] = "Depth3",
         ["4"] = "Depth4",
+        ["<m-1>"] = "Depth1",
+        ["<m-2>"] = "Depth2",
+        ["<m-3>"] = "Depth3",
+        ["<m-4>"] = "Depth4",
         ["Q"] = "Command",
         ["<tab>"] = "Toggle",
         ["za"] = "Toggle",
@@ -737,6 +807,9 @@ function M.get_default_values()
         ["<c-j>"] = "PeekDown",
         ["<c-n>"] = "NextSection",
         ["<c-p>"] = "PreviousSection",
+        ["n"] = "NextSection",
+        ["p"] = "PreviousSection",
+        ["^"] = "ParentSection",
       },
     },
   }
@@ -887,6 +960,27 @@ function M.validate_config()
           tostring(config.diff_viewer)
         )
       )
+    end
+  end
+
+  local function validate_wip()
+    if not validate_type(config.wip, "wip", "table") then
+      return
+    end
+
+    validate_type(config.wip.enabled, "wip.enabled", "boolean")
+    validate_type(config.wip.before, "wip.before", "boolean")
+    validate_type(config.wip.after, "wip.after", "boolean")
+  end
+
+  local function validate_forge()
+    if not validate_type(config.forge, "forge", "table") then
+      return
+    end
+
+    if validate_type(config.forge.notifications, "forge.notifications", "table") then
+      validate_type(config.forge.notifications.poll, "forge.notifications.poll", "boolean")
+      validate_type(config.forge.notifications.interval, "forge.notifications.interval", "number")
     end
   end
 
@@ -1049,6 +1143,14 @@ function M.validate_config()
 
     local valid_popup_commands = {
       false,
+      "SparseCheckoutPopup",
+      "SubtreePopup",
+      "BundlePopup",
+      "ShortlogPopup",
+      "ReposPopup",
+      "DispatchPopup",
+      "MergetoolPopup",
+      "FileDispatchPopup",
     }
 
     for _, cmd in pairs(M.get_default_values().mappings.popup) do
@@ -1315,6 +1417,8 @@ function M.validate_config()
     validate_integrations()
     validate_diff_viewer()
     validate_sections()
+    validate_wip()
+    validate_forge()
     validate_ignored_settings()
     validate_mappings()
     validate_highlights()

@@ -71,11 +71,6 @@ function M.fetch_elsewhere(popup)
   fetch_from(remote, remote, "", popup:get_arguments())
 end
 
--- TODO: add other URI's as options remotes in another_branch and refspec
---   https://
---   git://
---   git@
-
 function M.fetch_another_branch(popup)
   local remote = select_remote()
   if not remote then

@@ -1,7 +1,7 @@
 ---@class RPC
 ---@field address string
 ---@field channel_id integer
----@field mode string Assume TPC if the address ends with a port like '...:XXXX'
+---@field mode string Assume TCP if the address ends with a port like '...:1234'
 ---| 'tcp'
 ---| 'pipe'
 local RPC = {}

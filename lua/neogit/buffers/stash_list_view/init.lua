@@ -43,17 +43,19 @@ function M:open()
     mappings = {
       v = {
         [popups.mapping_for("CherryPickPopup")] = function()
-          -- TODO: implement
-          -- local stash = self.buffer.ui:get_commit_under_cursor()[1]
-          -- if stash then
-          --   local stash_item = util.find(self.stashes, function(s)
-          --     return s.idx == tonumber(stash:match("stash@{(%d+)}"))
-          --   end)
-          --
-          --   if stash and input.get_permission("Pop stash " .. stash_item.name) then
-          --     git.stash.pop(stash)
-          --   end
-          -- end
+          local stashes = self.buffer.ui:get_commits_in_selection()
+          if stashes and #stashes > 0 then
+            if input.get_permission(table.concat(stashes, "\n") .. "\n\nPop " .. #stashes .. " stashes?") then
+              -- Pop from the highest index downward so earlier pops don't
+              -- renumber the stashes still to be popped.
+              table.sort(stashes, function(a, b)
+                return tonumber(a:match("stash@{(%d+)}") or -1) > tonumber(b:match("stash@{(%d+)}") or -1)
+              end)
+              for _, stash in ipairs(stashes) do
+                git.stash.pop(stash)
+              end
+            end
+          end
         end,
         [status_maps["Discard"]] = function()
           local stashes = self.buffer.ui:get_commits_in_selection()

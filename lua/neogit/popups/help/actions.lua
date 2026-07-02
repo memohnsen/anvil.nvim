@@ -21,7 +21,8 @@ local function present(commands)
     end
 
     if type(keymap) == "table" and next(keymap) then
-      -- HACK: Remove "za" as listed keymap for toggle action.
+      -- NOTE: Remove "za" as a listed keymap for the toggle action, so the help
+      -- popup shows a single, canonical key for Toggle rather than both.
       table.sort(keymap)
       if name == "Toggle" and keymap[2] == "za" then
         table.remove(keymap, 2)
@@ -115,6 +116,8 @@ M.popups = function(env)
     { "StashPopup", "Stash", popups.open("stash", function(p)
       p(env.stash)
     end) },
+    { "RunPopup", "Run", popups.open("run") },
+    { "ForgePopup", "Forge", popups.open("forge") },
     { "Command", "Command", require("neogit.buffers.status.actions").n_command(nil) },
   }
 

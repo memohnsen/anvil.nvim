@@ -41,6 +41,7 @@ end
 ---@field suppress_console boolean
 ---@field git_hook boolean
 ---@field user_command boolean
+---@field git_subcommand string|nil
 
 ---@class Process
 ---@field cmd string[]
@@ -55,6 +56,7 @@ end
 ---@field git_hook boolean
 ---@field suppress_console boolean
 ---@field user_command boolean
+---@field git_subcommand string|nil
 ---@field on_partial_line fun(process: Process, data: string)|nil callback on complete lines
 ---@field on_error (fun(res: ProcessResult): boolean) Intercept the error externally, returning false prevents the error from being logged
 ---@field defer_show_preview_buffers fun(): nil
@@ -128,6 +130,7 @@ function Process:clone()
     git_hook = self.git_hook,
     suppress_console = self.suppress_console,
     user_command = self.user_command,
+    git_subcommand = self.git_subcommand,
   }
 end
 

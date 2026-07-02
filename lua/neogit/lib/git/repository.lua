@@ -18,6 +18,7 @@ local modules = {
   "bisect",
   "tag",
   "hooks",
+  "wip",
 }
 
 ---@class NeogitRepoState
@@ -40,6 +41,7 @@ local modules = {
 ---@field merge             NeogitRepoMerge
 ---@field bisect            NeogitRepoBisect
 ---@field hooks             string[]
+---@field wip               NeogitRepoWip
 ---
 ---@class NeogitRepoHead
 ---@field branch         string|nil
@@ -97,6 +99,9 @@ local modules = {
 ---@field items          BisectItem[]
 ---@field finished       boolean
 ---@field current        CommitLogEntry
+---
+---@class NeogitRepoWip
+---@field items          WipItem[]
 
 ---@return NeogitRepoState
 local function empty_state()
@@ -166,6 +171,9 @@ local function empty_state()
       current = {},
     },
     refs = {},
+    wip = {
+      items = {},
+    },
   }
 end
 

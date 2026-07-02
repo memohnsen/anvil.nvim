@@ -183,7 +183,6 @@ function M.autosquash(popup)
   end
 end
 
--- TODO: Extract to rebase lib?
 function M.abort()
   if input.get_permission("Abort rebase?") then
     git.rebase.abort()

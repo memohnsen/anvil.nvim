@@ -5,11 +5,6 @@ local actions = require("neogit.popups.log.actions")
 local M = {}
 
 function M.create()
-  -- TODO: Need to figure out how this works
-  -- :switch("h", "header", "Show header", { cli_prefix = "++" })
-  -- :switch("p", "patch", "Show diffs")
-  -- :switch("s", "stat", "Show diffstats")
-
   local p = popup
     .builder()
     :name("NeogitLogPopup")

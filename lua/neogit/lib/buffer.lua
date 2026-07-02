@@ -465,7 +465,8 @@ end
 
 function Buffer:set_buffer_option(name, value)
   if self.handle ~= nil then
-    -- TODO: Remove this at some point. Nvim 0.10 throws an error if using both buf and scope
+    -- NOTE: Once Nvim 0.10 is no longer supported this branch can be dropped;
+    -- 0.10 throws an error if using both buf and scope, so we gate on 0.11.
     if vim.fn.has("nvim-0.11") == 1 then
       api.nvim_set_option_value(name, value, { scope = "local", buf = self.handle })
     else
@@ -840,7 +841,8 @@ function Buffer.create(config)
     buffer:set_window_option("spell", config.spell_check or false)
     buffer:set_window_option("wrap", false)
     buffer:set_window_option("foldmethod", "manual")
-    -- TODO: Need to find a way to turn this off properly when unloading plugin
+    -- NOTE: winfixbuf would lock the buffer to its window, but there's no clean
+    -- way to release it when unloading the plugin, so it's intentionally left off.
     -- buffer:set_window_option("winfixbuf", true)
   end
 

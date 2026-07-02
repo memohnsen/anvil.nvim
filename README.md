@@ -1,31 +1,58 @@
-<div align="center">
-    <div>
-        <div><img src="https://github.com/NeogitOrg/neogit/assets/7228095/7684545f-47b5-40e2-aedd-ccf56e0553f4" width="400px"/></div>
-        <div><h1>Neogit</h1></div>
-    </div>
-    <table>
-        <tr>
-            <td>
-                <strong>A git interface for <a href="https://neovim.io">Neovim</a>, inspired by <a href="https://magit.vc">Magit</a>.</strong>
-            </td>
-        </tr>
-    </table>
-
-  [![Lua](https://img.shields.io/badge/Lua-blue.svg?style=for-the-badge&logo=lua)](http://www.lua.org)
-  [![Neovim](https://img.shields.io/badge/Neovim%200.10+-green.svg?style=for-the-badge&logo=neovim)](https://neovim.io)
-  [![MIT](https://img.shields.io/badge/MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
-  <a href="https://dotfyle.com/plugins/NeogitOrg/neogit">
-    <img src="https://dotfyle.com/plugins/NeogitOrg/neogit/shield?style=for-the-badge" />
-  </a>
-</div>
-
-
 ![preview](https://github.com/NeogitOrg/neogit/assets/7228095/d964cbb4-a557-4e97-ac5b-ea571a001f5c)
 
+## About this project
+
+This project aims to be a complete, 1:1 rewrite of Emacs' [Magit](https://magit.vc) and
+[Forge](https://github.com/magit/forge) for Neovim: the full git porcelain *and* the
+GitHub/forge layer baked into a single plugin, sharing one status buffer, one section model,
+and one popup system, exactly the way Forge extends Magit.
+
+It stands on the shoulders of two excellent projects:
+
+- **[Neogit](https://github.com/NeogitOrg/neogit)** - this repository is a fork of Neogit,
+  which provides the Magit-style git porcelain this project builds on. All credit for the
+  core architecture and the vast majority of the git functionality goes to the Neogit
+  authors and contributors.
+- **[octo.nvim](https://github.com/pwntester/octo.nvim)** - the inspiration and reference
+  for the forge layer. Octo pioneered GitHub issue/PR editing inside Neovim via the `gh`
+  CLI, and the forge subsystem here follows its approach (auth and GraphQL through `gh`,
+  no credential handling in the plugin).
+
+Where this fork goes beyond upstream Neogit today: a built-in **Forge** subsystem
+(`N` popup, pull request/issue sections in the status buffer, local offline-first topic
+store synced via `gh`), **git blame** (`:Neogit blame`, magit-blame style), and the
+**run popup** (`!`) for arbitrary git/shell commands and WIP snapshots. See [PLAN.md](PLAN.md) for the full
+parity roadmap (topic view buffers, PR reviews, notifications, submodules, patches, and
+more are in progress).
+
+AI Disclosure: Any and all changes to the base neogit repo have been done by Claude Fable and ChatGPT.
 
 ## Installation
 
-Here's an example spec for [Lazy](https://github.com/folke/lazy.nvim), but you're free to use whichever plugin manager suits you.
+Use whichever plugin manager suits your config. Neogit has no required Lua dependencies,
+though the optional integrations below can make diffs, logs, and pickers nicer.
+
+### `vim.pack`
+
+Neovim 0.12+ ships a built-in plugin manager, `vim.pack`:
+
+```lua
+vim.pack.add({
+  "https://github.com/NeogitOrg/neogit",
+
+  -- Optional integrations; keep whichever ones you use.
+  "https://github.com/sindrets/diffview.nvim",
+  "https://github.com/esmuellert/codediff.nvim",
+  "https://github.com/m00qek/baleia.nvim",
+  "https://github.com/nvim-telescope/telescope.nvim",
+  "https://github.com/ibhagwan/fzf-lua",
+  "https://github.com/nvim-mini/mini.pick",
+  "https://github.com/folke/snacks.nvim",
+  "https://github.com/kkharji/sqlite.lua", -- optional Forge store backend
+})
+```
+
+### `lazy.nvim`
 
 ```lua
 {
@@ -44,12 +71,61 @@ Here's an example spec for [Lazy](https://github.com/folke/lazy.nvim), but you'r
     "ibhagwan/fzf-lua",              -- optional
     "nvim-mini/mini.pick",           -- optional
     "folke/snacks.nvim",             -- optional
+
+    "kkharji/sqlite.lua",            -- optional Forge store backend
   },
   cmd = "Neogit",
   keys = {
     { "<leader>gg", "<cmd>Neogit<cr>", desc = "Show Neogit UI" }
   }
 }
+```
+
+### `mini.deps`
+
+```lua
+local add = MiniDeps.add
+
+add({
+  source = "NeogitOrg/neogit",
+  depends = {
+    -- Optional integrations; keep whichever ones you use.
+    "sindrets/diffview.nvim",
+    "esmuellert/codediff.nvim",
+    "m00qek/baleia.nvim",
+    "nvim-telescope/telescope.nvim",
+    "ibhagwan/fzf-lua",
+    "nvim-mini/mini.pick",
+    "folke/snacks.nvim",
+  },
+})
+```
+
+### `packer.nvim`
+
+```lua
+use({
+  "NeogitOrg/neogit",
+  requires = {
+    -- Optional integrations; keep whichever ones you use.
+    "sindrets/diffview.nvim",
+    "esmuellert/codediff.nvim",
+    "m00qek/baleia.nvim",
+    "nvim-telescope/telescope.nvim",
+    "ibhagwan/fzf-lua",
+    "nvim-mini/mini.pick",
+    "folke/snacks.nvim",
+  },
+})
+```
+
+### Vim packages
+
+If you manage packages directly, clone Neogit into a `start` package:
+
+```sh
+git clone https://github.com/NeogitOrg/neogit \
+  "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/pack/neogit/start/neogit
 ```
 
 ## Usage
@@ -62,6 +138,21 @@ You can either open Neogit by using the `Neogit` command:
 :Neogit cwd=%:p:h   " Uses the repository of the current file
 :Neogit kind=<kind> " Open specified popup directly
 :Neogit commit      " Open commit popup
+:Neogit forge       " Open forge popup (GitHub PRs/issues, requires `gh`)
+:Neogit run         " Open run popup (arbitrary git/shell commands)
+:Neogit blame       " Blame the current file (magit-blame style)
+:Neogit patch       " Open patch/am popup
+:Neogit notes       " Open git-notes popup
+:Neogit submodule   " Open submodule popup
+:Neogit clone       " Open clone popup
+:Neogit file_dispatch " Open file-oriented dispatch popup
+:Neogit sparse_checkout " Open sparse-checkout popup
+:Neogit subtree     " Open subtree popup
+:Neogit bundle      " Open bundle popup
+:Neogit shortlog    " Open shortlog popup
+:Neogit repos       " Open repositories list popup
+:Neogit dispatch    " Open global dispatch popup
+:Neogit mergetool   " Open mergetool popup
 
 " Map it to a key
 nnoremap <leader>gg <cmd>Neogit<cr>
@@ -82,6 +173,12 @@ neogit.open()
 
 -- open a specific popup
 neogit.open({ "commit" })
+
+-- open the forge popup (fetch/browse/list/checkout GitHub PRs and issues)
+neogit.open({ "forge" })
+
+-- blame the current file
+neogit.open({ "blame" })
 
 -- open as a split
 neogit.open({ kind = "split" })
@@ -402,6 +499,17 @@ neogit.setup {
       folded = true,
       hidden = false,
     },
+    -- Forge: open pull requests for the current GitHub repository.
+    -- Populated from the local store; sync with the forge popup ("N f").
+    pullreqs = {
+      folded = true,
+      hidden = false,
+    },
+    -- Forge: open issues for the current GitHub repository.
+    issues = {
+      folded = true,
+      hidden = false,
+    },
   },
   mappings = {
     commit_editor = {
@@ -466,12 +574,12 @@ neogit.setup {
       ["M"] = "RemotePopup",
       ["P"] = "PushPopup",
       ["X"] = "ResetPopup",
-      ["Z"] = "StashPopup",
+      ["Z"] = "WorktreePopup",
+      ["z"] = "StashPopup",
       ["i"] = "IgnorePopup",
       ["t"] = "TagPopup",
       ["b"] = "BranchPopup",
       ["B"] = "BisectPopup",
-      ["w"] = "WorktreePopup",
       ["c"] = "CommitPopup",
       ["f"] = "FetchPopup",
       ["l"] = "LogPopup",
@@ -479,6 +587,14 @@ neogit.setup {
       ["p"] = "PullPopup",
       ["r"] = "RebasePopup",
       ["v"] = "RevertPopup",
+      ["!"] = "RunPopup",
+      ["N"] = "ForgePopup",
+      ["W"] = "PatchPopup",
+      ["T"] = "NotesPopup",
+      ["O"] = "SubmodulePopup",
+      ["C"] = "ClonePopup",
+      ["h"] = "DispatchPopup",
+      ["e"] = "MergetoolPopup",
     },
     status = {
       ["j"] = "MoveDown",
@@ -531,26 +647,154 @@ neogit.setup {
 The following popup menus are available from all buffers:
 - Bisect
 - Branch + Branch Config
+- Bundle
 - Cherry Pick
 - Commit
 - Diff
+- Dispatch (`h`)
 - Fetch
+- File Dispatch
+- Forge (GitHub pull requests + issues, `N`)
 - Ignore
 - Log
+- Mergetool (`e`)
 - Merge
+- Notes (`T`)
+- Patch/Am (`W`)
 - Pull
 - Push
 - Rebase
 - Remote + Remote Config
+- Repositories
 - Reset
 - Revert
+- Run (arbitrary git/shell commands, `!`)
+- Shortlog
+- Sparse Checkout
 - Stash
+- Submodule (`O`)
+- Subtree
 - Tag
 - Worktree
 
 Many popups will use whatever is currently under the cursor or selected as input for an action. For example, to cherry-pick a range of commits from the log view, a linewise visual selection can be made, and using either `apply` or `pick` from the cherry-pick menu will use the selection.
 
 This works for just about everything that has an object-ID in git, and if you find one that you think _should_ work but doesn't, open an issue :)
+
+Popup arguments keep Magit-style transient state when `remember_settings` is enabled. Use
+`<C-x>s` inside a popup to save the current arguments as defaults, `<C-x>p` to cycle previous
+argument histories, and `<C-x>r` to reset saved defaults for that popup.
+
+The submodule popup (`O`) includes a list buffer via `L`; from that buffer, use `u` update,
+`s` sync, or `d` deinit on the selected submodule.
+
+Status buffers include Magit-style section navigation aliases: `n`/`p` move to next/previous
+section, `^` jumps to the current section header, and `M-1`..`M-4` mirror the existing
+section depth controls.
+
+## Forge
+
+The forge subsystem integrates GitHub into the status buffer and popup system, the same way
+[Forge](https://github.com/magit/forge) integrates with Magit. It is inspired by (and
+follows the architecture of) [octo.nvim](https://github.com/pwntester/octo.nvim).
+
+**Requirements:** the [GitHub CLI](https://cli.github.com/) (`gh`) installed and
+authenticated (`gh auth login`), and a GitHub remote named `origin` or `upstream`.
+Everything degrades gracefully when these aren't present: no sections render and
+popup actions explain what's missing.
+
+**How it works:** topics are kept in a local store (`stdpath("data")/neogit/forge/`),
+so the status buffer renders instantly and offline; the network is only touched when
+you sync. If `kkharji/sqlite.lua` is installed, Neogit uses SQLite; otherwise it
+falls back to the JSON store. This mirrors Forge's local-database design.
+
+Open the forge popup with `N` from any Neogit buffer (or `:Neogit forge`):
+
+| Key   | Action                                                      |
+|-------|-------------------------------------------------------------|
+| `f f` | Pull open PRs, issues, and discussions into the local store  |
+| `c i` | Create issue (opens browser)                                |
+| `c p` | Create pull request (`gh pr create --web`)                  |
+| `b I` | Browse issues on the web                                    |
+| `b P` | Browse pull requests on the web                             |
+| `b r` | Browse repository on the web                                |
+| `b b` | Browse current branch on the web                            |
+| `l t` | List topics (picker), open selection in browser             |
+| `l d` | List discussions in a Neogit buffer                         |
+| `l n` | List notifications in a Neogit buffer                       |
+| `b f` | Checkout a pull request branch (`gh pr checkout`)           |
+
+After a sync, **Pull requests** and **Issues** sections appear in the status buffer
+(configurable via `sections.pullreqs` / `sections.issues`). **Discussions** are synced
+too, but `sections.discussions.hidden` defaults to `true`, matching Forge's optional
+discussion sections. Rows carry the topic URL, so `Y` yanks it.
+
+Topic view buffers render stored descriptions, comments, and PR reviews. Press `f` in a
+topic buffer to pull fresh detail for that issue or pull request. Issue and pull request
+topic buffers also support `c` comment with a multi-line post editor, `e` edit title,
+`b` edit body in a multi-line editor, `l` add labels,
+`a` add assignees, `m` set milestone, `+` add a reaction, and `s` toggle open/closed state through `gh`;
+pull request topic buffers additionally support `r` add reviewers, `R` remove reviewers,
+`V` queue a pending review comment, `A` approve, `v` submit a comment review, and `X`
+request changes; successful edits refresh the local topic detail.
+Local Forge topic marks are available with `M` mark read, `u` mark unread, `*` save/unsave,
+and `d` mark done; list and status buffers show `U`/`S`/`D` markers.
+Topic list buffers default to active topics; use `A` all, `U` unread, `S` saved, `D` done,
+`O` open, `C` closed, `a` author, `r` assignee, `l` label, and `m` milestone filters.
+Pull request topic detail also renders inline review threads with file/line context, diff hunks,
+resolution state, and comments. Use `i` to reply to a numbered review thread, `x` to resolve it,
+and `U` to mark it unresolved. Comment and reply editors submit on write or the commit-editor
+submit mapping. Use `C` to react to a numbered topic comment and `I` to react to a numbered
+review-thread comment. Suggested changes in review comments are listed in the topic buffer; use
+`S` to apply a numbered suggestion to the local worktree.
+
+Notification buffers support `r` mark read, `u` mark unread, `s` save/unsave, `d` mark
+done, `g` refresh, `A`/`U`/`S`/`D` filter all/unread/saved/done, and `o` open the
+notification target. Read/unread/save/done state is stored locally;
+mark-read also updates GitHub when `gh` is available and authenticated.
+See [PLAN.md](PLAN.md).
+
+Notification polling is opt-in:
+
+```lua
+require("neogit").setup({
+  forge = {
+    notifications = {
+      poll = true,
+      interval = 300000,
+    },
+  },
+})
+```
+
+By default notifications update only when you press `N f n` or `g` inside the notification buffer.
+
+## WIP snapshots
+
+The run popup also includes Magit-style WIP snapshot commands:
+
+- `! w` saves the current dirty worktree to `refs/wip/worktree/<branch>`.
+- `! W` saves the staged index to `refs/wip/index/<branch>`.
+- `! l` opens a WIP snapshot list; press `<cr>` or `a` to apply the selected snapshot.
+
+Snapshots are ordinary git refs with reflogs, so they do not clean or stash your working tree.
+When present, they appear in the status buffer under `WIP snapshots`.
+
+Automatic WIP snapshots are opt-in:
+
+```lua
+require("neogit").setup({
+  wip = {
+    enabled = true,
+    before = true,
+    after = false,
+  },
+})
+```
+
+When enabled, Neogit writes WIP refs around mutating git operations it runs. `before`
+captures your state before the operation starts, and `after` can additionally capture
+the successful result.
 
 ## Highlight Groups
 
@@ -580,6 +824,9 @@ Neogit emits the following events:
 | `NeogitCherryPick`    | One or more commits were cherry-picked    | `{ commits: string[] }`                          |
 | `NeogitMerge`         | A merge finished                          | `{ branch: string, args = string[], status: "ok"\|"conflict" }` |
 | `NeogitStash`         | A stash finished                          | `{ success: boolean }` |
+| `NeogitForgePulled`   | Forge topics were synced from GitHub      | `{}` |
+| `NeogitForgePullRequestCheckout` | A PR branch was checked out via the forge popup | `{ number: number }` |
+| `NeogitUserCommandComplete` | A command from the run popup finished | `{ cmd: string, cwd: string }` |
 
 ## Versioning
 
@@ -593,15 +840,10 @@ The `master` branch will always be compatible with the latest **stable** release
 
 See [CONTRIBUTING.md](https://github.com/NeogitOrg/neogit/blob/master/CONTRIBUTING.md) for more details.
 
-## Contributors
-
-<a href="https://github.com/NeogitOrg/Neogit/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=NeogitOrg/Neogit" />
-</a>
-
 ## Special Thanks
 
-- [kolja](https://github.com/kolja) for the Neogit Logo
+- [Neogit](https://github.com/NeogitOrg/neogit) and its contributors - this project is a fork of Neogit, which provides the entire git porcelain foundation
+- [octo.nvim](https://github.com/pwntester/octo.nvim) - the inspiration and reference implementation for the forge/GitHub layer
+- [Magit](https://magit.vc) and [Forge](https://github.com/magit/forge) - the gold standard this project is a 1:1 rewrite of
 - [gitgraph.nvim](https://github.com/isakbm/gitgraph.nvim) for the "kitty" git graph renderer
 - [vim-flog](https://github.com/rbong/vim-flog) for the "unicode" git graph renderer
-

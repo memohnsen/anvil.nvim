@@ -62,8 +62,6 @@ function M.View(entries)
     return M.Entry(entry, total)
   end)
 
-  -- TODO: Add the "+ for more" here
-
   return entries
 end
 

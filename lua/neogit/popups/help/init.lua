@@ -3,7 +3,6 @@ local actions = require("neogit.popups.help.actions")
 
 local M = {}
 
--- TODO: Better alignment for labels, keys
 function M.create(env)
   local p = popup.builder():name("NeogitHelpPopup"):group_heading("Commands")
 

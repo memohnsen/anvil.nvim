@@ -106,6 +106,46 @@ describe("Neogit config", function()
         assert.True(vim.tbl_count(require("neogit.config").validate_config()) ~= 0)
       end)
 
+      it("should return invalid when wip isn't a table", function()
+        config.values.wip = "not a table"
+        assert.True(vim.tbl_count(require("neogit.config").validate_config()) ~= 0)
+      end)
+
+      it("should return invalid when wip.enabled isn't a boolean", function()
+        config.values.wip.enabled = "not a boolean"
+        assert.True(vim.tbl_count(require("neogit.config").validate_config()) ~= 0)
+      end)
+
+      it("should return invalid when wip.before isn't a boolean", function()
+        config.values.wip.before = "not a boolean"
+        assert.True(vim.tbl_count(require("neogit.config").validate_config()) ~= 0)
+      end)
+
+      it("should return invalid when wip.after isn't a boolean", function()
+        config.values.wip.after = "not a boolean"
+        assert.True(vim.tbl_count(require("neogit.config").validate_config()) ~= 0)
+      end)
+
+      it("should return invalid when forge isn't a table", function()
+        config.values.forge = "not a table"
+        assert.True(vim.tbl_count(require("neogit.config").validate_config()) ~= 0)
+      end)
+
+      it("should return invalid when forge.notifications isn't a table", function()
+        config.values.forge.notifications = "not a table"
+        assert.True(vim.tbl_count(require("neogit.config").validate_config()) ~= 0)
+      end)
+
+      it("should return invalid when forge.notifications.poll isn't a boolean", function()
+        config.values.forge.notifications.poll = "not a boolean"
+        assert.True(vim.tbl_count(require("neogit.config").validate_config()) ~= 0)
+      end)
+
+      it("should return invalid when forge.notifications.interval isn't a number", function()
+        config.values.forge.notifications.interval = "not a number"
+        assert.True(vim.tbl_count(require("neogit.config").validate_config()) ~= 0)
+      end)
+
       it("should return invalid when commit_editor isn't a table", function()
         config.values.commit_editor = "not a table"
         assert.True(vim.tbl_count(require("neogit.config").validate_config()) ~= 0)
@@ -429,6 +469,31 @@ describe("Neogit config", function()
         assert.True(vim.tbl_count(require("neogit.config").validate_config()) ~= 0)
       end)
 
+      it("should return invalid when sections.pullreqs isn't a table", function()
+        config.values.sections.pullreqs = "not a table"
+        assert.True(vim.tbl_count(require("neogit.config").validate_config()) ~= 0)
+      end)
+
+      it("should return invalid when sections.pullreqs.folded isn't a boolean", function()
+        config.values.sections.pullreqs.folded = "not a boolean"
+        assert.True(vim.tbl_count(require("neogit.config").validate_config()) ~= 0)
+      end)
+
+      it("should return invalid when sections.issues isn't a table", function()
+        config.values.sections.issues = "not a table"
+        assert.True(vim.tbl_count(require("neogit.config").validate_config()) ~= 0)
+      end)
+
+      it("should return invalid when sections.issues.hidden isn't a boolean", function()
+        config.values.sections.issues.hidden = "not a boolean"
+        assert.True(vim.tbl_count(require("neogit.config").validate_config()) ~= 0)
+      end)
+
+      it("should return invalid when sections.discussions.hidden isn't a boolean", function()
+        config.values.sections.discussions.hidden = "not a boolean"
+        assert.True(vim.tbl_count(require("neogit.config").validate_config()) ~= 0)
+      end)
+
       it("should return invalid when ignored_settings isn't a table", function()
         config.values.ignored_settings = "not a table"
         assert.True(vim.tbl_count(require("neogit.config").validate_config()) ~= 0)
@@ -499,6 +564,49 @@ describe("Neogit config", function()
         assert.True(vim.tbl_count(require("neogit.config").validate_config()) == 0)
       end)
 
+      it("should include forge and wip sections in the default config", function()
+        assert.are.same({ folded = true, hidden = false }, config.values.sections.pullreqs)
+        assert.are.same({ folded = true, hidden = false }, config.values.sections.issues)
+        assert.are.same({ folded = true, hidden = true }, config.values.sections.discussions)
+        assert.are.same({ folded = true, hidden = false }, config.values.sections.wip)
+        assert.True(vim.tbl_count(require("neogit.config").validate_config()) == 0)
+      end)
+
+      it("should include disabled forge notification polling by default", function()
+        assert.are.same({
+          notifications = {
+            poll = false,
+            interval = 300000,
+          },
+        }, config.values.forge)
+        assert.True(vim.tbl_count(require("neogit.config").validate_config()) == 0)
+      end)
+
+      it("should map the Magit-compatible popup keys by default", function()
+        assert.are.same("RunPopup", config.values.mappings.popup["!"])
+        assert.are.same("ForgePopup", config.values.mappings.popup["N"])
+        assert.are.same("StashPopup", config.values.mappings.popup["z"])
+        assert.are.same("WorktreePopup", config.values.mappings.popup["Z"])
+        assert.are.same("PatchPopup", config.values.mappings.popup["W"])
+        assert.are.same("NotesPopup", config.values.mappings.popup["T"])
+        assert.are.same("SubmodulePopup", config.values.mappings.popup["O"])
+        assert.are.same("ClonePopup", config.values.mappings.popup["C"])
+        assert.are.same("DispatchPopup", config.values.mappings.popup["h"])
+        assert.are.same("MergetoolPopup", config.values.mappings.popup["e"])
+        assert.True(vim.tbl_count(require("neogit.config").validate_config()) == 0)
+      end)
+
+      it("should map Magit-compatible section navigation keys by default", function()
+        assert.are.same("NextSection", config.values.mappings.status["n"])
+        assert.are.same("PreviousSection", config.values.mappings.status["p"])
+        assert.are.same("ParentSection", config.values.mappings.status["^"])
+        assert.are.same("Depth1", config.values.mappings.status["<m-1>"])
+        assert.are.same("Depth2", config.values.mappings.status["<m-2>"])
+        assert.are.same("Depth3", config.values.mappings.status["<m-3>"])
+        assert.are.same("Depth4", config.values.mappings.status["<m-4>"])
+        assert.True(vim.tbl_count(require("neogit.config").validate_config()) == 0)
+      end)
+
       it("should return valid when kind is a valid window kind", function()
         config.values.kind = "floating"
         assert.True(vim.tbl_count(require("neogit.config").validate_config()) == 0)
@@ -556,6 +664,15 @@ describe("Neogit config", function()
 
       it("should return valid when ignored_settings has a valid setting", function()
         config.values.ignored_settings = { "Valid--setting-format" }
+        assert.True(vim.tbl_count(require("neogit.config").validate_config()) == 0)
+      end)
+
+      it("should return valid when wip uses the default automatic snapshot settings", function()
+        assert.are.same({
+          enabled = false,
+          before = true,
+          after = false,
+        }, config.values.wip)
         assert.True(vim.tbl_count(require("neogit.config").validate_config()) == 0)
       end)
 

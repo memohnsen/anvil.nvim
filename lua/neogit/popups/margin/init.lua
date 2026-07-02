@@ -4,8 +4,6 @@ local actions = require("neogit.popups.margin.actions")
 
 local M = {}
 
--- TODO: Implement various flags/switches
-
 function M.create(env)
   local p = popup
     .builder()

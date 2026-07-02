@@ -241,11 +241,6 @@ M.CommitEntry = Component.new(function(commit, remotes, args)
         flat_map({ commit.subject, commit.body }, function(line)
           local lines = vim.split(line, "\\n")
 
-          -- TODO: More correctly handle newlines/wrapping in messages
-          -- lines = util.flat_map(lines, function(line)
-          --   return util.str_wrap(line, vim.o.columns * 0.6)
-          -- end)
-
           lines = map(lines, function(l)
             return row(util.merge(graph, { text(" "), text(l) }))
           end)
@@ -382,7 +377,7 @@ M.Grid = Component.new(function(props)
         local remaining_width = column_width - width + props.gap
         table.insert(item.children, text(string.rep(" ", remaining_width)))
       else
-        error("TODO")
+        error("Cannot align unsupported node tag: " .. tostring(item.tag))
       end
     end
   end

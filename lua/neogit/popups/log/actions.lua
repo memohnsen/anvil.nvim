@@ -138,8 +138,10 @@ function M.reflog_other(popup)
   end
 end
 
--- TODO: Prefill the fuzzy finder with the filepath under cursor, if there is one
----comment
+-- NOTE: Prefilling the fuzzy finder with the filepath under the cursor would
+-- require the Finder/picker backends (telescope, fzf-lua, snacks, vim.ui.select)
+-- to accept an initial query, which they don't currently expose.
+---@return function
 function M.limit_to_files()
   local fn = function(popup, option)
     if option.value ~= "" then

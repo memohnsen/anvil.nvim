@@ -73,6 +73,7 @@ function M.setup(opts)
   signs.setup(config.values)
   state.setup(config.values)
   autocmds.setup()
+  require("neogit.forge.poller").setup(config.values.forge.notifications)
 end
 
 local function construct_opts(opts)
@@ -136,6 +137,21 @@ end
 ---| "stash"
 ---| "tag"
 ---| "worktree"
+---| "run"
+---| "forge"
+---| "blame"
+---| "patch"
+---| "notes"
+---| "submodule"
+---| "clone"
+---| "file_dispatch"
+---| "sparse_checkout"
+---| "subtree"
+---| "bundle"
+---| "shortlog"
+---| "repos"
+---| "dispatch"
+---| "mergetool"
 
 ---@class OpenOpts
 ---@field cwd string|nil
@@ -152,6 +168,11 @@ function M.open(opts)
   opts = construct_opts(opts)
 
   local git = require("neogit.lib.git")
+  if opts[1] == "clone" then
+    open_popup(opts[1])
+    return
+  end
+
   if not git.cli.is_inside_worktree(opts.cwd) then
     local input = require("neogit.lib.input")
     if input.get_permission(("Initialize repository in %s?"):format(opts.cwd)) then
@@ -160,6 +181,17 @@ function M.open(opts)
       M.notification.error("The current working directory is not a git repository")
       return
     end
+  end
+
+  if opts[1] == "blame" then
+    local file = vim.api.nvim_buf_get_name(0)
+    if file == "" then
+      M.notification.error("Buffer is not backed by a file")
+      return
+    end
+
+    require("neogit.buffers.blame_view").new(file):open()
+    return
   end
 
   if opts[1] ~= nil then
@@ -282,6 +314,21 @@ function M.complete(arglead)
     "stash",
     "tag",
     "worktree",
+    "run",
+    "forge",
+    "blame",
+    "patch",
+    "notes",
+    "submodule",
+    "clone",
+    "file_dispatch",
+    "sparse_checkout",
+    "subtree",
+    "bundle",
+    "shortlog",
+    "repos",
+    "dispatch",
+    "mergetool",
   })
 end
 

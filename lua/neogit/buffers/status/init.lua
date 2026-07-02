@@ -5,7 +5,7 @@ local popups = require("neogit.popups")
 local git = require("neogit.lib.git")
 local Watcher = require("neogit.watcher")
 local a = require("neogit.lib.async")
-local logger = require("neogit.logger") -- TODO: Add logging
+local logger = require("neogit.logger")
 local event = require("neogit.lib.event")
 
 ---@class Semaphore
@@ -178,6 +178,20 @@ function M:open(kind)
         [popups.mapping_for("StashPopup")]      = self:_action("v_stash_popup"),
         [popups.mapping_for("TagPopup")]        = self:_action("v_tag_popup"),
         [popups.mapping_for("WorktreePopup")]   = self:_action("v_worktree_popup"),
+        [popups.mapping_for("RunPopup")]        = self:_action("v_run_popup"),
+        [popups.mapping_for("ForgePopup")]      = self:_action("v_forge_popup"),
+        [popups.mapping_for("PatchPopup")]      = self:_action("v_patch_popup"),
+        [popups.mapping_for("NotesPopup")]      = self:_action("v_notes_popup"),
+        [popups.mapping_for("SubmodulePopup")]  = self:_action("v_submodule_popup"),
+        [popups.mapping_for("ClonePopup")]      = self:_action("v_clone_popup"),
+        [popups.mapping_for("FileDispatchPopup")] = self:_action("v_file_dispatch_popup"),
+        [popups.mapping_for("SparseCheckoutPopup")] = self:_action("v_sparse_checkout_popup"),
+        [popups.mapping_for("SubtreePopup")]    = self:_action("v_subtree_popup"),
+        [popups.mapping_for("BundlePopup")]     = self:_action("v_bundle_popup"),
+        [popups.mapping_for("ShortlogPopup")]   = self:_action("v_shortlog_popup"),
+        [popups.mapping_for("ReposPopup")]      = self:_action("v_repos_popup"),
+        [popups.mapping_for("DispatchPopup")]   = self:_action("v_dispatch_popup"),
+        [popups.mapping_for("MergetoolPopup")]  = self:_action("v_mergetool_popup"),
       },
       n = {
         [mappings["Command"]]                   = self:_action("n_command"),
@@ -217,6 +231,7 @@ function M:open(kind)
         [mappings["VSplitOpen"]]                = self:_action("n_vertical_split_open"),
         [mappings["NextSection"]]               = self:_action("n_next_section"),
         [mappings["PreviousSection"]]           = self:_action("n_prev_section"),
+        [mappings["ParentSection"]]             = self:_action("n_parent_section"),
         [popups.mapping_for("BisectPopup")]     = self:_action("n_bisect_popup"),
         [popups.mapping_for("BranchPopup")]     = self:_action("n_branch_popup"),
         [popups.mapping_for("CherryPickPopup")] = self:_action("n_cherry_pick_popup"),
@@ -237,6 +252,20 @@ function M:open(kind)
         [popups.mapping_for("StashPopup")]      = self:_action("n_stash_popup"),
         [popups.mapping_for("TagPopup")]        = self:_action("n_tag_popup"),
         [popups.mapping_for("WorktreePopup")]   = self:_action("n_worktree_popup"),
+        [popups.mapping_for("RunPopup")]        = self:_action("n_run_popup"),
+        [popups.mapping_for("ForgePopup")]      = self:_action("n_forge_popup"),
+        [popups.mapping_for("PatchPopup")]      = self:_action("n_patch_popup"),
+        [popups.mapping_for("NotesPopup")]      = self:_action("n_notes_popup"),
+        [popups.mapping_for("SubmodulePopup")]  = self:_action("n_submodule_popup"),
+        [popups.mapping_for("ClonePopup")]      = self:_action("n_clone_popup"),
+        [popups.mapping_for("FileDispatchPopup")] = self:_action("n_file_dispatch_popup"),
+        [popups.mapping_for("SparseCheckoutPopup")] = self:_action("n_sparse_checkout_popup"),
+        [popups.mapping_for("SubtreePopup")]    = self:_action("n_subtree_popup"),
+        [popups.mapping_for("BundlePopup")]     = self:_action("n_bundle_popup"),
+        [popups.mapping_for("ShortlogPopup")]   = self:_action("n_shortlog_popup"),
+        [popups.mapping_for("ReposPopup")]      = self:_action("n_repos_popup"),
+        [popups.mapping_for("DispatchPopup")]   = self:_action("n_dispatch_popup"),
+        [popups.mapping_for("MergetoolPopup")]  = self:_action("n_mergetool_popup"),
         ["V"]                                   = function()
           vim.cmd("norm! V")
         end,

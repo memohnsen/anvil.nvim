@@ -59,6 +59,7 @@ end
 ---@field await boolean run synchronously if true
 ---@field long boolean is the command expected to be long running? (like git bisect, commit, rebase, etc)
 ---@field pty boolean run command in PTY?
+---@field wip_skip boolean Skip automatic wip snapshots for this call
 ---@field on_error fun(res: ProcessResult): boolean function to call if the process exits with status > 0. Used to
 ---                                                 determine how to handle the error, if user should be alerted or not
 
@@ -930,9 +931,7 @@ local configurations = {
     aliases = {
       message = function(tbl)
         return function(text)
-          -- TODO: Is this escapement needed?
-          local escaped_text, _ = text:gsub([["]], [[\"]])
-          return tbl.args("-m", string.format([["%s"]], escaped_text))
+          return tbl.args("-m", text)
         end
       end,
     },
@@ -1239,6 +1238,7 @@ local function new_builder(subcommand)
       git_hook = git.hooks.exists(subcommand) and not vim.tbl_contains(cmd, "--no-verify"),
       suppress_console = not not (opts.hidden or opts.long),
       user_command = false,
+      git_subcommand = subcommand,
     }
   end
 
@@ -1251,6 +1251,7 @@ local function new_builder(subcommand)
       await = false,
       long = false,
       pty = false,
+      wip_skip = false,
     })
 
     if opts.pty then

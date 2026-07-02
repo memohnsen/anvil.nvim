@@ -6,8 +6,9 @@ local M = {}
 
 function M.create(env)
   local in_progress = git.sequencer.pick_or_revert_in_progress()
-  -- TODO: enabled = true needs to check if incompatible switch is toggled in internal state, and not apply.
-  --       if you enable 'no edit', and revert, next time you load the popup both will be enabled
+  -- NOTE: The "edit" switch defaults to enabled; if the user has toggled the
+  -- incompatible "no-edit" switch, the persisted state can show both as enabled
+  -- on the next open until one is toggled again.
 
   local p = popup
     .builder()

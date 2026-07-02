@@ -7,6 +7,39 @@ local M = {
   history = {},
 }
 
+local mutating_git_commands = {
+  add = true,
+  apply = true,
+  checkout = true,
+  ["cherry-pick"] = true,
+  clean = true,
+  commit = true,
+  fetch = true,
+  merge = true,
+  mv = true,
+  pull = true,
+  push = true,
+  rebase = true,
+  remote = true,
+  reset = true,
+  restore = true,
+  revert = true,
+  rm = true,
+  stash = true,
+  submodule = true,
+  switch = true,
+  tag = true,
+  worktree = true,
+}
+
+local function should_snapshot_wip(process, opts)
+  if opts.wip_skip or process.user_command then
+    return false
+  end
+
+  return process.git_subcommand and mutating_git_commands[process.git_subcommand] == true
+end
+
 ---@param job ProcessResult
 local function store_process_result(job)
   table.insert(M.history, job)
@@ -134,6 +167,7 @@ function M.call(process, opts)
 
   local MAX_PASSWORD_ATTEMPTS = 3
   local state = { password_attempts = 0, cached_responses = {} }
+  local wip = should_snapshot_wip(process, opts) and require("neogit.lib.git.wip") or nil
 
   local function setup_pty(proc)
     if opts.pty then
@@ -179,9 +213,16 @@ function M.call(process, opts)
   end
 
   setup_pty(process)
+  if wip then
+    wip.before_command(process.git_subcommand)
+  end
+
   local result = run(process)
   assert(result, "Command did not complete")
   store_process_result(result)
+  if wip and result.code == 0 then
+    wip.after_command(process.git_subcommand)
+  end
 
   while
     result.code ~= 0
@@ -204,6 +245,9 @@ function M.call(process, opts)
     result = run(retry)
     assert(result, "Command did not complete")
     store_process_result(result)
+    if wip and result.code == 0 then
+      wip.after_command(process.git_subcommand)
+    end
   end
 
   if result.code ~= 0 and state.password_attempts >= MAX_PASSWORD_ATTEMPTS then
