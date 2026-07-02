@@ -1,4 +1,4 @@
-![preview](https://github.com/NeogitOrg/neogit/assets/7228095/d964cbb4-a557-4e97-ac5b-ea571a001f5c)
+![preview](https://github.com/anvil.nvim/neogit/assets/7228095/d964cbb4-a557-4e97-ac5b-ea571a001f5c)
 
 ## About this project
 
@@ -11,25 +11,23 @@ It stands on the shoulders of two excellent projects:
 
 - **[Neogit](https://github.com/NeogitOrg/neogit)** - this repository is a fork of Neogit,
   which provides the Magit-style git porcelain this project builds on. All credit for the
-  core architecture and the vast majority of the git functionality goes to the Neogit
+  core architecture and the vast majority of the git functionality goes to the Anvil
   authors and contributors.
 - **[octo.nvim](https://github.com/pwntester/octo.nvim)** - the inspiration and reference
   for the forge layer. Octo pioneered GitHub issue/PR editing inside Neovim via the `gh`
   CLI, and the forge subsystem here follows its approach (auth and GraphQL through `gh`,
   no credential handling in the plugin).
 
-Where this fork goes beyond upstream Neogit today: a built-in **Forge** subsystem
+Where this fork goes beyond upstream Anvil today: a built-in **Forge** subsystem
 (`N` popup, pull request/issue sections in the status buffer, local offline-first topic
-store synced via `gh`), **git blame** (`:Neogit blame`, magit-blame style), and the
-**run popup** (`!`) for arbitrary git/shell commands and WIP snapshots. See [PLAN.md](PLAN.md) for the full
-parity roadmap (topic view buffers, PR reviews, notifications, submodules, patches, and
-more are in progress).
+store synced via `gh`), **git blame** (`:Anvil blame`, magit-blame style), and the
+**run popup** (`!`) for arbitrary git/shell commands and WIP snapshots.
 
 AI Disclosure: Any and all changes to the base neogit repo have been done by Claude Fable and ChatGPT.
 
 ## Installation
 
-Use whichever plugin manager suits your config. Neogit has no required Lua dependencies,
+Use whichever plugin manager suits your config. Anvil has no required Lua dependencies,
 though the optional integrations below can make diffs, logs, and pickers nicer.
 
 ### `vim.pack`
@@ -38,7 +36,7 @@ Neovim 0.12+ ships a built-in plugin manager, `vim.pack`:
 
 ```lua
 vim.pack.add({
-  "https://github.com/NeogitOrg/neogit",
+  "https://github.com/anvil.nvim/neogit",
 
   -- Optional integrations; keep whichever ones you use.
   "https://github.com/sindrets/diffview.nvim",
@@ -56,7 +54,7 @@ vim.pack.add({
 
 ```lua
 {
-  "NeogitOrg/neogit",
+  "memohnsen/anvil.nvim",
   lazy = true,
   dependencies = {
     -- Only one of these is needed.
@@ -74,9 +72,9 @@ vim.pack.add({
 
     "kkharji/sqlite.lua",            -- optional Forge store backend
   },
-  cmd = "Neogit",
+  cmd = "Anvil",
   keys = {
-    { "<leader>gg", "<cmd>Neogit<cr>", desc = "Show Neogit UI" }
+    { "<leader>gg", "<cmd>Anvil<cr>", desc = "Show Neogit UI" }
   }
 }
 ```
@@ -87,7 +85,7 @@ vim.pack.add({
 local add = MiniDeps.add
 
 add({
-  source = "NeogitOrg/neogit",
+  source = "memohnsen/anvil.nvim",
   depends = {
     -- Optional integrations; keep whichever ones you use.
     "sindrets/diffview.nvim",
@@ -105,7 +103,7 @@ add({
 
 ```lua
 use({
-  "NeogitOrg/neogit",
+  "memohnsen/anvil.nvim",
   requires = {
     -- Optional integrations; keep whichever ones you use.
     "sindrets/diffview.nvim",
@@ -119,48 +117,39 @@ use({
 })
 ```
 
-### Vim packages
-
-If you manage packages directly, clone Neogit into a `start` package:
-
-```sh
-git clone https://github.com/NeogitOrg/neogit \
-  "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/pack/neogit/start/neogit
-```
-
 ## Usage
 
-You can either open Neogit by using the `Neogit` command:
+You can either open Anvil by using the `Neogit` command:
 
 ```vim
-:Neogit             " Open the status buffer in a new tab
-:Neogit cwd=<cwd>   " Use a different repository path
-:Neogit cwd=%:p:h   " Uses the repository of the current file
-:Neogit kind=<kind> " Open specified popup directly
-:Neogit commit      " Open commit popup
-:Neogit forge       " Open forge popup (GitHub PRs/issues, requires `gh`)
-:Neogit run         " Open run popup (arbitrary git/shell commands)
-:Neogit blame       " Blame the current file (magit-blame style)
-:Neogit patch       " Open patch/am popup
-:Neogit notes       " Open git-notes popup
-:Neogit submodule   " Open submodule popup
-:Neogit clone       " Open clone popup
-:Neogit file_dispatch " Open file-oriented dispatch popup
-:Neogit sparse_checkout " Open sparse-checkout popup
-:Neogit subtree     " Open subtree popup
-:Neogit bundle      " Open bundle popup
-:Neogit shortlog    " Open shortlog popup
-:Neogit repos       " Open repositories list popup
-:Neogit dispatch    " Open global dispatch popup
-:Neogit mergetool   " Open mergetool popup
+:Anvil             " Open the status buffer in a new tab
+:Anvil cwd=<cwd>   " Use a different repository path
+:Anvil cwd=%:p:h   " Uses the repository of the current file
+:Anvil kind=<kind> " Open specified popup directly
+:Anvil commit      " Open commit popup
+:Anvil forge       " Open forge popup (GitHub PRs/issues, requires `gh`)
+:Anvil run         " Open run popup (arbitrary git/shell commands)
+:Anvil blame       " Blame the current file (magit-blame style)
+:Anvil patch       " Open patch/am popup
+:Anvil notes       " Open git-notes popup
+:Anvil submodule   " Open submodule popup
+:Anvil clone       " Open clone popup
+:Anvil file_dispatch " Open file-oriented dispatch popup
+:Anvil sparse_checkout " Open sparse-checkout popup
+:Anvil subtree     " Open subtree popup
+:Anvil bundle      " Open bundle popup
+:Anvil shortlog    " Open shortlog popup
+:Anvil repos       " Open repositories list popup
+:Anvil dispatch    " Open global dispatch popup
+:Anvil mergetool   " Open mergetool popup
 
 " Map it to a key
-nnoremap <leader>gg <cmd>Neogit<cr>
+nnoremap <leader>gg <cmd>Anvil<cr>
 ```
 
 ```lua
 -- Or via lua api
-vim.keymap.set("n", "<leader>gg", "<cmd>Neogit<cr>", { desc = "Open Neogit UI" })
+vim.keymap.set("n", "<leader>gg", "<cmd>Anvil<cr>", { desc = "Open Neogit UI" })
 ```
 
 Or using the lua api:
@@ -187,14 +176,14 @@ neogit.open({ kind = "split" })
 neogit.open({ cwd = "~" })
 
 -- You can map this to a key
-vim.keymap.set("n", "<leader>gg", neogit.open, { desc = "Open Neogit UI" })
+vim.keymap.set("n", "<leader>gg", neogit.open, { desc = "Open Anvil UI" })
 
 -- Wrap in a function to pass additional arguments
 vim.keymap.set(
     "n",
     "<leader>gg",
     function() neogit.open({ kind = "split" }) end,
-    { desc = "Open Neogit UI" }
+    { desc = "Open Anvil UI" }
 )
 ```
 
@@ -305,7 +294,7 @@ neogit.setup {
   },
   -- Set to false if you want to be responsible for creating _ALL_ keymappings
   use_default_keymaps = true,
-  -- Neogit refreshes its internal state after specific events, which can be expensive depending on the repository size.
+  -- Anvil refreshes its internal state after specific events, which can be expensive depending on the repository size.
   -- Disabling `auto_refresh` will make it so you have to manually refresh the status after you open it.
   auto_refresh = true,
   -- Value used for `--sort` option for `git branch` command
@@ -425,7 +414,7 @@ neogit.setup {
     -- If enabled, use telescope for menu selection rather than vim.ui.select.
     -- Allows multi-select and some things that vim.ui.select doesn't.
     telescope = nil,
-    -- Neogit only provides inline diffs. If you want a more traditional way to look at diffs, you can use `diffview`.
+    -- Anvil only provides inline diffs. If you want a more traditional way to look at diffs, you can use `diffview`.
     -- The diffview integration enables the diff popup.
     --
     -- Requires you to have `sindrets/diffview.nvim` installed.
@@ -705,10 +694,10 @@ popup actions explain what's missing.
 
 **How it works:** topics are kept in a local store (`stdpath("data")/neogit/forge/`),
 so the status buffer renders instantly and offline; the network is only touched when
-you sync. If `kkharji/sqlite.lua` is installed, Neogit uses SQLite; otherwise it
+you sync. If `kkharji/sqlite.lua` is installed, Anvil uses SQLite; otherwise it
 falls back to the JSON store. This mirrors Forge's local-database design.
 
-Open the forge popup with `N` from any Neogit buffer (or `:Neogit forge`):
+Open the forge popup with `N` from any Anvil buffer (or `:Anvil forge`):
 
 | Key   | Action                                                      |
 |-------|-------------------------------------------------------------|
@@ -720,8 +709,8 @@ Open the forge popup with `N` from any Neogit buffer (or `:Neogit forge`):
 | `b r` | Browse repository on the web                                |
 | `b b` | Browse current branch on the web                            |
 | `l t` | List topics (picker), open selection in browser             |
-| `l d` | List discussions in a Neogit buffer                         |
-| `l n` | List notifications in a Neogit buffer                       |
+| `l d` | List discussions in a Anvil buffer                         |
+| `l n` | List notifications in a Anvil buffer                       |
 | `b f` | Checkout a pull request branch (`gh pr checkout`)           |
 
 After a sync, **Pull requests** and **Issues** sections appear in the status buffer
@@ -792,7 +781,7 @@ require("neogit").setup({
 })
 ```
 
-When enabled, Neogit writes WIP refs around mutating git operations it runs. `before`
+When enabled, Anvil writes WIP refs around mutating git operations it runs. `before`
 captures your state before the operation starts, and `after` can additionally capture
 the successful result.
 
@@ -803,42 +792,30 @@ See the built-in documentation for a comprehensive list of highlight groups. If 
 
 ## Events
 
-Neogit emits the following events:
+Anvil emits the following events:
 
 | Event                   | Description                              | Event Data                                      |
 |-------------------------|------------------------------------------|-------------------------------------------------|
-| `NeogitStatusRefreshed` | Status has been reloaded                 | `{}`                                            |
-| `NeogitCommitComplete`  | Commit has been created                  | `{}`                                            |
-| `NeogitPushComplete`    | Push has completed                       | `{}`                                            |
-| `NeogitPullComplete`    | Pull has completed                       | `{}`                                            |
-| `NeogitFetchComplete`   | Fetch has completed                      | `{}`                                            |
-| `NeogitBranchCreate`    | Branch was created, starting from `base` | `{ branch_name: string, base: string? }`        |
-| `NeogitBranchDelete`    | Branch was deleted                       | `{ branch_name: string }`                       |
-| `NeogitBranchCheckout`  | Branch was checked out                   | `{ branch_name: string }`                       |
-| `NeogitBranchReset`     | Branch was reset to a commit/branch      | `{ branch_name: string, resetting_to: string }` |
-| `NeogitBranchRename`    | Branch was renamed                       | `{ branch_name: string, new_name: string }`     |
-| `NeogitRebase`        | A rebase finished                        | `{ commit: string, status: "ok"\|"conflict" }`    |
-| `NeogitReset`         | A branch was reset to a certain commit   | `{ commit: string, mode: "soft"\|"mixed"\|"hard"\|"keep"\|"index" }` |
-| `NeogitTagCreate`     | A tag was placed on a certain commit     | `{ name: string, ref: string }`                   |
-| `NeogitTagDelete`     | A tag was removed                        | `{ name: string }`                                |
-| `NeogitCherryPick`    | One or more commits were cherry-picked    | `{ commits: string[] }`                          |
-| `NeogitMerge`         | A merge finished                          | `{ branch: string, args = string[], status: "ok"\|"conflict" }` |
-| `NeogitStash`         | A stash finished                          | `{ success: boolean }` |
-| `NeogitForgePulled`   | Forge topics were synced from GitHub      | `{}` |
-| `NeogitForgePullRequestCheckout` | A PR branch was checked out via the forge popup | `{ number: number }` |
-| `NeogitUserCommandComplete` | A command from the run popup finished | `{ cmd: string, cwd: string }` |
-
-## Versioning
-
-Neogit follows semantic versioning.
-
-## Compatibility
-
-The `master` branch will always be compatible with the latest **stable** release of Neovim, and usually with the latest **nightly** build as well.
-
-## Contributing
-
-See [CONTRIBUTING.md](https://github.com/NeogitOrg/neogit/blob/master/CONTRIBUTING.md) for more details.
+| `AnvilStatusRefreshed` | Status has been reloaded                 | `{}`                                            |
+| `AnvilCommitComplete`  | Commit has been created                  | `{}`                                            |
+| `AnvilPushComplete`    | Push has completed                       | `{}`                                            |
+| `AnvilPullComplete`    | Pull has completed                       | `{}`                                            |
+| `AnvilFetchComplete`   | Fetch has completed                      | `{}`                                            |
+| `AnvilBranchCreate`    | Branch was created, starting from `base` | `{ branch_name: string, base: string? }`        |
+| `AnvilBranchDelete`    | Branch was deleted                       | `{ branch_name: string }`                       |
+| `AnvilBranchCheckout`  | Branch was checked out                   | `{ branch_name: string }`                       |
+| `AnvilBranchReset`     | Branch was reset to a commit/branch      | `{ branch_name: string, resetting_to: string }` |
+| `AnvilBranchRename`    | Branch was renamed                       | `{ branch_name: string, new_name: string }`     |
+| `AnvilRebase`        | A rebase finished                        | `{ commit: string, status: "ok"\|"conflict" }`    |
+| `AnvilReset`         | A branch was reset to a certain commit   | `{ commit: string, mode: "soft"\|"mixed"\|"hard"\|"keep"\|"index" }` |
+| `AnvilTagCreate`     | A tag was placed on a certain commit     | `{ name: string, ref: string }`                   |
+| `AnvilTagDelete`     | A tag was removed                        | `{ name: string }`                                |
+| `AnvilCherryPick`    | One or more commits were cherry-picked    | `{ commits: string[] }`                          |
+| `AnvilMerge`         | A merge finished                          | `{ branch: string, args = string[], status: "ok"\|"conflict" }` |
+| `AnvilStash`         | A stash finished                          | `{ success: boolean }` |
+| `AnvilForgePulled`   | Forge topics were synced from GitHub      | `{}` |
+| `AnvilForgePullRequestCheckout` | A PR branch was checked out via the forge popup | `{ number: number }` |
+| `AnvilUserCommandComplete` | A command from the run popup finished | `{ cmd: string, cwd: string }` |
 
 ## Special Thanks
 
