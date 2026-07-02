@@ -6,24 +6,21 @@ local M = {}
 function M.create(env)
   local p = popup.builder():name("AnvilHelpPopup"):group_heading("Commands")
 
-  -- Split the (long) Commands list across two columns.
   local popups = actions.popups(env)
   for i, cmd in ipairs(popups) do
     p = p:action(cmd.keys, cmd.name, cmd.fn)
 
-    if i == math.ceil(#popups / 2) then
+    if i == math.floor(#popups / 2) then
       p = p:new_action_group()
     end
   end
 
-  -- Third column stacks the two smaller groups vertically ("Applying changes"
-  -- above "Essential commands") so the popup doesn't run off the right edge.
-  p = p:new_action_group("Applying changes")
+  p = p:new_action_group():new_action_group("Applying changes")
   for _, cmd in ipairs(actions.actions()) do
     p = p:action(cmd.keys, cmd.name, cmd.fn)
   end
 
-  p = p:group_heading(""):group_heading("Essential commands")
+  p = p:new_action_group():new_action_group("Essential commands")
   for _, cmd in ipairs(actions.essential()) do
     p = p:action(cmd.keys, cmd.name, cmd.fn)
   end
