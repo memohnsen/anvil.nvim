@@ -671,8 +671,6 @@ function M.pull_upstream(cb)
     return
   end
 
-  local upstream_repo = { host = repo.host, owner = owner, name = name }
-
   client.graphql(queries.topics, { owner = owner, name = name }, function(data, err)
     if err or not data or not data.repository then
       cb(false, err or "no data from upstream")
@@ -683,14 +681,19 @@ function M.pull_upstream(cb)
     local issues = util.map((data.repository.issues or {}).nodes or {}, normalize_issue)
     local discussions = util.map((data.repository.discussions or {}).nodes or {}, normalize_discussion)
 
-    local saved = store.save(upstream_repo, {
+    -- Store upstream topics *inside the fork's own record* under an `upstream`
+    -- field. This keeps them out of the fork's base topic lists while letting
+    -- the status buffer render them with a plain, network-free store read.
+    local record = store.load(repo) or {}
+    record.upstream = {
+      repo = parent_nwo,
       pullreqs = pullreqs,
       issues = issues,
       discussions = discussions,
       synced_at = os.date("!%Y-%m-%dT%H:%M:%SZ"),
-    })
+    }
 
-    if not saved then
+    if not store.save(repo, record) then
       cb(false, "failed to save upstream topics")
       return
     end
@@ -702,47 +705,37 @@ function M.pull_upstream(cb)
       discussions = #discussions,
     })
 
-    cb(true, nil, {
-      pullreqs = pullreqs,
-      issues = issues,
-      discussions = discussions,
-      upstream = parent_nwo,
-    })
+    dispatch_status_refresh()
+
+    cb(true, nil, record.upstream)
   end)
 end
 
 ---Return topics stored for this repo's upstream parent, or empty tables when
----the repo is not a fork or upstream topics have not been pulled yet.
----@return ForgeTopics
+---the repo is not a fork or upstream topics have not been pulled yet. Reads
+---from the fork's local store record — never touches the network.
+---@return { repo: string|nil, pullreqs: table[], issues: table[], discussions: table[], synced_at: string|nil }
 function M.upstream_topics()
+  local empty = { repo = nil, pullreqs = {}, issues = {}, discussions = {}, synced_at = nil }
+
   local ok, repo = pcall(client.get_repo)
   if not ok or not repo then
-    return { pullreqs = {}, issues = {}, discussions = {}, notifications = {}, synced_at = nil }
+    return empty
   end
 
-  -- The upstream repo slug is cached by pull_upstream; read it back via gh (sync, cached by OS).
-  local proc = vim.system(
-    { "gh", "repo", "view", ("%s/%s"):format(repo.owner, repo.name), "--json", "parent", "--jq", 'if .parent then .parent.owner.login + "/" + .parent.name else "" end' },
-    { text = true }
-  )
-  local result = proc:wait(10000)
-  local parent_nwo = result and result.stdout and vim.trim(result.stdout) or ""
-  if parent_nwo == "" or parent_nwo == "null" then
-    return { pullreqs = {}, issues = {}, discussions = {}, notifications = {}, synced_at = nil }
+  local loaded_ok, record = pcall(store.load, repo)
+  if not loaded_ok or type(record) ~= "table" or type(record.upstream) ~= "table" then
+    return empty
   end
 
-  local owner, name = parent_nwo:match("^([^/]+)/(.+)$")
-  if not owner or not name then
-    return { pullreqs = {}, issues = {}, discussions = {}, notifications = {}, synced_at = nil }
-  end
-
-  local upstream_repo = { host = repo.host, owner = owner, name = name }
-  local topics_ok, topics = pcall(store.get_topics, upstream_repo)
-  if not topics_ok or not topics then
-    return { pullreqs = {}, issues = {}, discussions = {}, notifications = {}, synced_at = nil }
-  end
-
-  return topics
+  local upstream = record.upstream
+  return {
+    repo = upstream.repo,
+    pullreqs = type(upstream.pullreqs) == "table" and upstream.pullreqs or {},
+    issues = type(upstream.issues) == "table" and upstream.issues or {},
+    discussions = type(upstream.discussions) == "table" and upstream.discussions or {},
+    synced_at = upstream.synced_at,
+  }
 end
 
 ---Read topics from the local store. Never touches the network, and never

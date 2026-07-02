@@ -688,12 +688,18 @@ function M.Status(state, config)
     and not wip_config.hidden
 
   local forge_topics = { pullreqs = {}, issues = {}, discussions = {} }
+  local upstream_topics = { pullreqs = {}, issues = {}, discussions = {} }
   do
     local ok, forge = pcall(require, "anvil.forge")
     if ok then
       local topics_ok, topics = pcall(forge.topics)
       if topics_ok and topics then
         forge_topics = topics
+      end
+
+      local up_ok, up = pcall(forge.upstream_topics)
+      if up_ok and up then
+        upstream_topics = up
       end
     end
   end
@@ -710,6 +716,11 @@ function M.Status(state, config)
 
   local show_discussions = #forge_topics.discussions > 0
     and not discussions_config.hidden
+
+  local upstream_label = upstream_topics.repo and (" (" .. upstream_topics.repo .. ")") or ""
+  local show_upstream_pullreqs = #upstream_topics.pullreqs > 0 and not pullreqs_config.hidden
+  local show_upstream_issues = #upstream_topics.issues > 0 and not issues_config.hidden
+  local show_upstream_discussions = #upstream_topics.discussions > 0 and not discussions_config.hidden
 
   return {
     List {
@@ -924,6 +935,30 @@ function M.Status(state, config)
           items = forge_topics.discussions,
           folded = discussions_config.folded,
           name = "discussions",
+        },
+        show_upstream_pullreqs and Section {
+          title = SectionTitle { title = "Upstream pull requests" .. upstream_label, highlight = "AnvilSectionHeader" },
+          count = true,
+          render = SectionItemForgeTopic,
+          items = upstream_topics.pullreqs,
+          folded = pullreqs_config.folded,
+          name = "upstream_pullreqs",
+        },
+        show_upstream_issues and Section {
+          title = SectionTitle { title = "Upstream issues" .. upstream_label, highlight = "AnvilSectionHeader" },
+          count = true,
+          render = SectionItemForgeTopic,
+          items = upstream_topics.issues,
+          folded = issues_config.folded,
+          name = "upstream_issues",
+        },
+        show_upstream_discussions and Section {
+          title = SectionTitle { title = "Upstream discussions" .. upstream_label, highlight = "AnvilSectionHeader" },
+          count = true,
+          render = SectionItemForgeTopic,
+          items = upstream_topics.discussions,
+          folded = discussions_config.folded,
+          name = "upstream_discussions",
         },
       },
     },
