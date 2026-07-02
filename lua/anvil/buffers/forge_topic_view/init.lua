@@ -55,7 +55,162 @@ local function reaction_summary(items)
   return table.concat(reactions, ", ")
 end
 
-local function metadata(topic)
+-- A tiny render builder that accumulates lines together with byte-column
+-- highlight spans, so the topic buffer can be styled instead of plain text.
+local Builder = {}
+Builder.__index = Builder
+
+function Builder.new()
+  return setmetatable({ lines = {}, highlights = {} }, Builder)
+end
+
+--- Append a line built from segments. A segment is either a plain string or a
+--- `{ text, hl }` table; when `hl` is set, that span is highlighted.
+---@param segments string|table
+function Builder:add(segments)
+  if type(segments) == "string" then
+    segments = { { text = segments } }
+  elseif segments.text then
+    segments = { segments }
+  end
+
+  local row = #self.lines
+  local text = ""
+  for _, seg in ipairs(segments) do
+    local piece = seg.text or ""
+    local col_start = #text
+    text = text .. piece
+    if seg.hl and piece ~= "" then
+      table.insert(self.highlights, { row, col_start, #text, seg.hl })
+    end
+  end
+
+  table.insert(self.lines, text)
+end
+
+function Builder:blank()
+  table.insert(self.lines, "")
+end
+
+--- A section header rendered as a colored bar: "▌ Title (count)".
+function Builder:section(title, count)
+  local segments = {
+    { text = "▌ ", hl = "AnvilSectionHeader" },
+    { text = title, hl = "AnvilSectionHeader" },
+  }
+  if count ~= nil then
+    table.insert(segments, { text = (" (%d)"):format(count), hl = "AnvilSectionHeaderCount" })
+  end
+  self:add(segments)
+end
+
+--- A "Label   value" metadata row with a subtle label and highlighted value.
+function Builder:field(label, value, value_hl)
+  self:add {
+    { text = ("  %-11s"):format(label), hl = "AnvilSubtleText" },
+    { text = value or "-", hl = value_hl },
+  }
+end
+
+--- Wrap free-form body/comment text, indenting each line.
+function Builder:body(text, indent)
+  indent = indent or "  "
+  for _, line in ipairs(vim.split(text, "\n", { plain = true })) do
+    self:add(indent .. line)
+  end
+end
+
+local STATE_HL = {
+  OPEN = "AnvilGraphGreen",
+  CLOSED = "AnvilGraphBoldRed",
+  MERGED = "AnvilGraphPurple",
+}
+
+--- The compact keybinding hint block at the top of the buffer. Keys are
+--- highlighted; descriptions are subtle. Pairs wrap to fit ~76 columns.
+---@param builder table
+---@param topic table
+local function render_hints(builder, topic)
+  local hints = {
+    { "f", "refresh" },
+    { "c", "comment" },
+    { "e", "title" },
+    { "b", "body" },
+    { "l", "labels" },
+    { "a", "assignees" },
+    { "m", "milestone" },
+    { "+", "react" },
+    { "s", "open/close" },
+    { "M", "read" },
+    { "*", "save" },
+    { "d", "done" },
+    { "o", "open URL" },
+    { "Y", "yank URL" },
+    { "q", "close" },
+  }
+
+  if topic.kind == "pullreq" then
+    vim.list_extend(hints, {
+      { "r", "reviewers" },
+      { "V", "review comment" },
+      { "A", "approve" },
+      { "v", "comment review" },
+      { "X", "request changes" },
+      { "i", "reply thread" },
+      { "x", "resolve" },
+      { "S", "apply suggestion" },
+    })
+  end
+
+  local max_width = 76
+  local segments = {}
+  local width = 0
+
+  local function flush()
+    if #segments > 0 then
+      builder:add(segments)
+      segments = {}
+      width = 0
+    end
+  end
+
+  for _, hint in ipairs(hints) do
+    local key, desc = hint[1], hint[2]
+    local chunk = #key + 1 + #desc + 3
+    if width > 0 and width + chunk > max_width then
+      flush()
+    end
+    if width == 0 then
+      table.insert(segments, { text = "  " })
+      width = 2
+    end
+    table.insert(segments, { text = key, hl = "AnvilPopupSwitchKey" })
+    table.insert(segments, { text = " " .. desc .. "   ", hl = "AnvilSubtleText" })
+    width = width + chunk
+  end
+  flush()
+end
+
+local function build(topic)
+  local builder = Builder.new()
+
+  local kind = topic.kind == "pullreq" and "Pull request" or topic.kind == "discussion" and "Discussion" or "Issue"
+
+  -- Title bar: "Issue #12  ●OPEN  @author"
+  builder:add {
+    { text = ("%s #%s"):format(kind, topic.number or "?"), hl = "AnvilPopupBold" },
+    { text = "  " },
+    { text = "● " .. (topic.state or "-"), hl = STATE_HL[topic.state] or "AnvilSubtleText" },
+    { text = topic.author and ("  @" .. topic.author) or "", hl = "AnvilPopupBranchName" },
+  }
+  builder:add { { text = topic.title or "", hl = "AnvilPopupBold" } }
+  builder:blank()
+
+  render_hints(builder, topic)
+  builder:blank()
+
+  -- Details section.
+  builder:section("Details")
   local marks = {}
   if topic.unread then
     table.insert(marks, "unread")
@@ -66,153 +221,147 @@ local function metadata(topic)
   if topic.done then
     table.insert(marks, "done")
   end
-
-  local rows = {
-    ("State:      %s"):format(topic.state or "-"),
-    ("Marks:      %s"):format(#marks > 0 and table.concat(marks, ", ") or "-"),
-    ("Author:     %s"):format(topic.author or "-"),
-    ("Updated:    %s"):format(topic.updated_at or "-"),
-    ("Labels:     %s"):format(join_names(topic.labels)),
-    ("Assignees:  %s"):format(join_names(topic.assignees)),
-    ("Milestone:  %s"):format(topic.milestone or "-"),
-    ("Reactions:  %s"):format(reaction_summary(topic.reactions)),
-  }
-
+  builder:field("Marks", #marks > 0 and table.concat(marks, ", ") or "-")
+  builder:field("Updated", topic.updated_at or "-")
+  builder:field("Labels", join_names(topic.labels), "AnvilTagName")
+  builder:field("Assignees", join_names(topic.assignees))
+  builder:field("Milestone", topic.milestone or "-")
+  builder:field("Reactions", reaction_summary(topic.reactions))
   if topic.kind == "pullreq" then
-    table.insert(rows, ("Draft:      %s"):format(topic.draft and "yes" or "no"))
-    table.insert(rows, ("Head:       %s"):format(topic.head or "-"))
-    table.insert(rows, ("Base:       %s"):format(topic.base or "-"))
-    table.insert(rows, ("Review:     %s"):format(topic.review_decision or "-"))
-    table.insert(rows, ("Reviewers:  %s"):format(join_names(topic.review_requests)))
+    builder:field("Draft", topic.draft and "yes" or "no")
+    builder:field("Head", topic.head or "-", "AnvilPopupBranchName")
+    builder:field("Base", topic.base or "-", "AnvilPopupBranchName")
+    builder:field("Review", topic.review_decision or "-")
+    builder:field("Reviewers", join_names(topic.review_requests))
   end
+  builder:field("URL", topic.url or "-", "AnvilFilePath")
+  builder:blank()
 
-  return rows
-end
-
-local function lines(topic)
-  local kind = topic.kind == "pullreq" and "Pull request" or topic.kind == "discussion" and "Discussion" or "Issue"
-  local title = ("%s #%s: %s"):format(kind, topic.number or "?", topic.title or "")
-  local result = {
-    title,
-    string.rep("=", #title),
-    "",
-  }
-
-  vim.list_extend(result, metadata(topic))
-
-  table.insert(result, "")
-  table.insert(result, "URL:")
-  table.insert(result, topic.url or "-")
-
-  table.insert(result, "")
-  table.insert(result, "Description:")
+  -- Description.
+  builder:section("Description")
   if topic.body and topic.body ~= "" then
-    vim.list_extend(result, vim.split(topic.body, "\n", { plain = true }))
+    builder:body(topic.body)
   else
-    table.insert(result, "-")
+    builder:add { { text = "  (no description)", hl = "AnvilSubtleText" } }
   end
+  builder:blank()
 
-  table.insert(result, "")
-  table.insert(result, "Comments:")
-  if type(topic.comments) == "table" and #topic.comments > 0 then
-    for idx, comment in ipairs(topic.comments) do
-      table.insert(result, ("Comment %d: @%s %s"):format(idx, comment.author or "unknown", comment.created_at or ""))
+  -- Comments.
+  local comments = type(topic.comments) == "table" and topic.comments or {}
+  builder:section("Comments", #comments)
+  if #comments > 0 then
+    for idx, comment in ipairs(comments) do
+      builder:add {
+        { text = ("  #%d "):format(idx), hl = "AnvilSubtleText" },
+        { text = "@" .. (comment.author or "unknown"), hl = "AnvilPopupBranchName" },
+        { text = "  " .. (comment.created_at or ""), hl = "AnvilSubtleText" },
+      }
       local reactions = reaction_summary(comment.reactions)
       if reactions ~= "-" then
-        table.insert(result, ("Reactions: %s"):format(reactions))
+        builder:field("reactions", reactions)
       end
       if comment.body and comment.body ~= "" then
-        vim.list_extend(result, vim.split(comment.body, "\n", { plain = true }))
+        builder:body(comment.body, "    ")
       end
-      table.insert(result, "")
+      builder:blank()
     end
   else
-    table.insert(result, "-")
+    builder:add { { text = "  (no comments)", hl = "AnvilSubtleText" } }
+    builder:blank()
   end
 
   if topic.kind == "pullreq" then
     local pending_comments = forge.pending_review_comments(topic)
-    table.insert(result, "")
-    table.insert(result, "Pending Review Comments:")
+    builder:section("Pending review comments", #pending_comments)
     if #pending_comments > 0 then
       for idx, comment in ipairs(pending_comments) do
-        table.insert(result, ("Pending %d: %s:%s"):format(idx, comment.path or "-", comment.line or "?"))
-        vim.list_extend(result, vim.split(comment.body or "", "\n", { plain = true }))
+        builder:add {
+          { text = ("  #%d "):format(idx), hl = "AnvilSubtleText" },
+          { text = ("%s:%s"):format(comment.path or "-", comment.line or "?"), hl = "AnvilFilePath" },
+        }
+        builder:body(comment.body or "", "    ")
       end
     else
-      table.insert(result, "-")
+      builder:add { { text = "  (none)", hl = "AnvilSubtleText" } }
     end
+    builder:blank()
 
-    table.insert(result, "")
-    table.insert(result, "Reviews:")
-    if type(topic.reviews) == "table" and #topic.reviews > 0 then
-      for _, review in ipairs(topic.reviews) do
-        table.insert(
-          result,
-          ("@%s %s %s"):format(review.author or "unknown", review.state or "", review.submitted_at or "")
-        )
+    local reviews = type(topic.reviews) == "table" and topic.reviews or {}
+    builder:section("Reviews", #reviews)
+    if #reviews > 0 then
+      for _, review in ipairs(reviews) do
+        builder:add {
+          { text = "  @" .. (review.author or "unknown"), hl = "AnvilPopupBranchName" },
+          { text = "  " .. (review.state or ""), hl = "AnvilPopupBold" },
+          { text = "  " .. (review.submitted_at or ""), hl = "AnvilSubtleText" },
+        }
         if review.body and review.body ~= "" then
-          vim.list_extend(result, vim.split(review.body, "\n", { plain = true }))
+          builder:body(review.body, "    ")
         end
-        table.insert(result, "")
+        builder:blank()
       end
     else
-      table.insert(result, "-")
+      builder:add { { text = "  (no reviews)", hl = "AnvilSubtleText" } }
+      builder:blank()
     end
 
-    table.insert(result, "")
-    table.insert(result, "Review Threads:")
-    if type(topic.review_threads) == "table" and #topic.review_threads > 0 then
-      for idx, thread in ipairs(topic.review_threads) do
+    local threads = type(topic.review_threads) == "table" and topic.review_threads or {}
+    builder:section("Review threads", #threads)
+    if #threads > 0 then
+      for idx, thread in ipairs(threads) do
         local status = thread.resolved and "resolved" or "unresolved"
         if thread.outdated then
           status = status .. ", outdated"
         end
         local line = thread.line or thread.start_line or "?"
-        table.insert(result, ("Thread %d: %s:%s (%s)"):format(idx, thread.path or "-", line, status))
+        builder:add {
+          { text = ("  #%d "):format(idx), hl = "AnvilSubtleText" },
+          { text = ("%s:%s"):format(thread.path or "-", line), hl = "AnvilFilePath" },
+          { text = (" (%s)"):format(status), hl = thread.resolved and "AnvilGraphGreen" or "AnvilSubtleText" },
+        }
 
         for comment_idx, comment in ipairs(thread.comments or {}) do
-          table.insert(
-            result,
-            ("Thread comment %d.%d: @%s %s"):format(idx, comment_idx, comment.author or "unknown", comment.created_at or "")
-          )
+          builder:add {
+            { text = ("    %d.%d "):format(idx, comment_idx), hl = "AnvilSubtleText" },
+            { text = "@" .. (comment.author or "unknown"), hl = "AnvilPopupBranchName" },
+            { text = "  " .. (comment.created_at or ""), hl = "AnvilSubtleText" },
+          }
           local reactions = reaction_summary(comment.reactions)
           if reactions ~= "-" then
-            table.insert(result, ("Reactions: %s"):format(reactions))
+            builder:field("reactions", reactions)
           end
           if comment.diff_hunk and comment.diff_hunk ~= "" then
-            table.insert(result, "Diff:")
-            vim.list_extend(result, vim.split(comment.diff_hunk, "\n", { plain = true }))
+            builder:add { { text = "      diff:", hl = "AnvilSubtleText" } }
+            builder:body(comment.diff_hunk, "      ")
           end
           if comment.body and comment.body ~= "" then
-            table.insert(result, "Comment:")
-            vim.list_extend(result, vim.split(comment.body, "\n", { plain = true }))
+            builder:body(comment.body, "      ")
             for suggestion_idx, _ in ipairs(suggestions.parse(comment.body)) do
-              table.insert(
-                result,
-                ("Suggestion %d.%d.%d: %s:%s-%s"):format(
-                  idx,
-                  comment_idx,
-                  suggestion_idx,
-                  thread.path or "-",
-                  thread.start_line or thread.line or "?",
-                  thread.line or thread.start_line or "?"
-                )
-              )
+              builder:add {
+                { text = ("      suggestion %d.%d.%d "):format(idx, comment_idx, suggestion_idx), hl = "AnvilSubtleText" },
+                {
+                  text = ("%s:%s-%s"):format(
+                    thread.path or "-",
+                    thread.start_line or thread.line or "?",
+                    thread.line or thread.start_line or "?"
+                  ),
+                  hl = "AnvilFilePath",
+                },
+              }
             end
           end
-          table.insert(result, "")
+          builder:blank()
         end
       end
     else
-      table.insert(result, "-")
+      builder:add { { text = "  (no review threads)", hl = "AnvilSubtleText" } }
+      builder:blank()
     end
   end
 
-  table.insert(result, "")
-  table.insert(result, ("Detail synced: %s"):format(topic.detail_synced_at or "not yet"))
+  builder:add { { text = ("Detail synced: %s"):format(topic.detail_synced_at or "not yet"), hl = "AnvilSubtleText" } }
 
-  return result
+  return builder
 end
 
 ---@param topic table
@@ -779,8 +928,20 @@ function M:render(buffer)
     return
   end
 
+  local builder = build(self.topic)
+
   buffer:set_buffer_option("modifiable", true)
-  buffer:set_lines(0, -1, false, lines(self.topic))
+  -- Clear directly (not via clear_namespace, which no-ops when unfocused, e.g.
+  -- when an async detail pull re-renders a background buffer).
+  local ns_id = buffer:get_namespace_id("default")
+  if ns_id then
+    vim.api.nvim_buf_clear_namespace(buffer.handle, ns_id, 0, -1)
+  end
+  buffer:set_lines(0, -1, false, builder.lines)
+  for _, hl in ipairs(builder.highlights) do
+    local row, col_start, col_end, group = hl[1], hl[2], hl[3], hl[4]
+    buffer:add_highlight(row, col_start, col_end, group)
+  end
   buffer:set_buffer_option("modifiable", false)
 end
 
