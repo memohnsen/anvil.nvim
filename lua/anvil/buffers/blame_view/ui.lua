@@ -34,17 +34,34 @@ function M.relative_date(timestamp)
   return "just now"
 end
 
----Renders the heading line for a blame hunk:
----  "shortsha author date summary"
+-- Blame heading styles cycled with `c`, mirroring `magit-blame-cycle-style`.
+M.STYLES = { "full", "compact", "author" }
+
+---Renders the heading line for a blame hunk. The columns shown depend on the
+---style: "full" (sha author date summary), "compact" (sha date), or "author"
+---(sha author).
 ---@param hunk BlameHunk
+---@param style string
 ---@return table
-local function HunkHeading(hunk)
+local function HunkHeading(hunk, style)
   local children
   if hunk.uncommitted then
     children = {
       text(hunk.abbrev, { highlight = "AnvilObjectId" }),
       text(" "),
       text("Uncommitted changes", { highlight = "AnvilSubtleText" }),
+    }
+  elseif style == "compact" then
+    children = {
+      text(hunk.abbrev, { highlight = "AnvilObjectId" }),
+      text(" "),
+      text(M.relative_date(hunk.author_time), { highlight = "AnvilSubtleText" }),
+    }
+  elseif style == "author" then
+    children = {
+      text(hunk.abbrev, { highlight = "AnvilObjectId" }),
+      text(" "),
+      text(hunk.author, { highlight = "AnvilGraphAuthor" }),
     }
   else
     children = {
@@ -63,9 +80,10 @@ end
 
 ---Renders a blame hunk: heading line followed by the hunk's file lines.
 ---@param hunk BlameHunk
+---@param style string|nil
 ---@return table
-M.Hunk = function(hunk)
-  local children = { HunkHeading(hunk) }
+M.Hunk = function(hunk, style)
+  local children = { HunkHeading(hunk, style or "full") }
 
   for _, line in ipairs(hunk.lines) do
     table.insert(children, row { text(line) })
@@ -79,11 +97,12 @@ M.Hunk = function(hunk)
 end
 
 ---@param hunks BlameHunk[]
+---@param style string|nil heading style (see `M.STYLES`)
 ---@return table
-function M.View(hunks)
+function M.View(hunks, style)
   local children = {}
   for _, hunk in ipairs(hunks) do
-    table.insert(children, M.Hunk(hunk))
+    table.insert(children, M.Hunk(hunk, style))
   end
 
   return children

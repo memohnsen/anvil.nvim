@@ -20,14 +20,40 @@ local function topic_label(topic)
   )
 end
 
+-- Forge tablist-style sort columns, cycled with `s`. Each entry knows how to
+-- extract a comparable key and whether it defaults to descending order.
+M.SORT_ORDER = {
+  { key = "number", label = "number", desc = true },
+  { key = "updated", label = "updated", desc = true },
+  { key = "state", label = "state", desc = false },
+  { key = "title", label = "title", desc = false },
+}
+
 function M.new(topics, title)
   return setmetatable({
     topics = topics or {},
     title = title or "Forge Topics",
     filter = "active",
     metadata_filter = nil,
+    sort_index = 1,
+    sort_reversed = false,
     buffer = nil,
   }, M)
+end
+
+---@param topic table
+---@param key string
+---@return number|string
+local function sort_value(topic, key)
+  if key == "number" then
+    return tonumber(topic.number) or 0
+  elseif key == "updated" then
+    return tostring(topic.updated_at or "")
+  elseif key == "state" then
+    return tostring(topic.state or "")
+  else
+    return tostring(topic.title or ""):lower()
+  end
 end
 
 local function names_include(items, needle)
@@ -76,6 +102,55 @@ function M:filtered_topics()
   end, self.topics)
 end
 
+---Returns the filtered topics sorted by the active tablist column.
+---@return table[]
+function M:sorted_topics()
+  local topics = self:filtered_topics()
+  local column = M.SORT_ORDER[self.sort_index]
+  local descending = column.desc
+  if self.sort_reversed then
+    descending = not descending
+  end
+
+  table.sort(topics, function(a, b)
+    local va, vb = sort_value(a, column.key), sort_value(b, column.key)
+    if va == vb then
+      -- Stable tiebreak on number so equal keys keep a deterministic order.
+      va, vb = tonumber(a.number) or 0, tonumber(b.number) or 0
+    end
+    if descending then
+      return va > vb
+    end
+    return va < vb
+  end)
+
+  return topics
+end
+
+---Human-readable description of the active sort, for the header.
+---@return string
+function M:sort_label()
+  local column = M.SORT_ORDER[self.sort_index]
+  local descending = column.desc
+  if self.sort_reversed then
+    descending = not descending
+  end
+  return ("%s %s"):format(column.label, descending and "v" or "^")
+end
+
+---Cycles to the next tablist sort column (magit/forge tablist columns).
+function M:cycle_sort()
+  self.sort_index = (self.sort_index % #M.SORT_ORDER) + 1
+  self.sort_reversed = false
+  self:render()
+end
+
+---Reverses the current sort direction.
+function M:reverse_sort()
+  self.sort_reversed = not self.sort_reversed
+  self:render()
+end
+
 function M:set_filter(filter, metadata)
   self.filter = filter
   self.metadata_filter = metadata
@@ -100,13 +175,13 @@ function M:open(kind)
     mappings = {
       n = {
         ["<cr>"] = function()
-          local topic = self:filtered_topics()[vim.fn.line(".") - 4]
+          local topic = self:sorted_topics()[vim.fn.line(".") - 4]
           if topic then
             require("anvil.buffers.forge_topic_view").new(topic):open()
           end
         end,
         ["o"] = function()
-          local topic = self:filtered_topics()[vim.fn.line(".") - 4]
+          local topic = self:sorted_topics()[vim.fn.line(".") - 4]
           if topic and topic.url and vim.ui.open then
             vim.ui.open(topic.url)
           end
@@ -141,6 +216,12 @@ function M:open(kind)
         ["m"] = function()
           self:prompt_metadata_filter("milestone", "Milestone")
         end,
+        ["s"] = function()
+          self:cycle_sort()
+        end,
+        ["i"] = function()
+          self:reverse_sort()
+        end,
         ["g"] = function()
           self:render()
         end,
@@ -171,8 +252,13 @@ function M:render(buffer)
     filter_label = ("%s:%s"):format(self.metadata_filter.kind, self.metadata_filter.value)
   end
 
-  local lines = { self.title, string.rep("=", #self.title), ("Filter: %s"):format(filter_label), "" }
-  for _, topic in ipairs(self:filtered_topics()) do
+  local lines = {
+    self.title,
+    string.rep("=", #self.title),
+    ("Filter: %s  Sort: %s"):format(filter_label, self:sort_label()),
+    "",
+  }
+  for _, topic in ipairs(self:sorted_topics()) do
     table.insert(lines, topic_label(topic))
   end
 

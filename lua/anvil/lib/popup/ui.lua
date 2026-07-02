@@ -233,6 +233,19 @@ local Actions = Component.new(function(props)
   }
 end)
 
+---Whether an argument suffix is visible at the given transient display level.
+---Headings and non-arg items are always visible; switches/options carry a
+---level (default 1) and are hidden when it exceeds the display level.
+---@param item table
+---@param display_level number
+---@return boolean
+function M.arg_visible(item, display_level)
+  if item.type ~= "option" and item.type ~= "switch" then
+    return true
+  end
+  return (item.level or 1) <= (display_level or 4)
+end
+
 function M.items(state)
   local items = {}
 
@@ -242,10 +255,13 @@ function M.items(state)
   end
 
   if state.args[1] then
+    local display_level = state.display_level or 4
     local section = {}
     local name = "Arguments"
     for _, item in ipairs(state.args) do
-      if item.type == "option" then
+      if not M.arg_visible(item, display_level) then
+        -- Hidden by the current transient level (magit `C-x l`).
+      elseif item.type == "option" then
         table.insert(section, Option(item))
       elseif item.type == "switch" then
         table.insert(section, Switch(item))

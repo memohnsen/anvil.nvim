@@ -836,6 +836,27 @@ function M.mark_topic_done(topic, cb)
   M.update_topic_mark(topic, { done = true, unread = false }, cb)
 end
 
+---Sets (or clears, when `note` is nil/empty) a local freetext note on a topic,
+---mirroring forge's topic-notes. Notes live in the local mark store only. The
+---cleared state is stored as an empty string, since the persisted-topic merge
+---(`tbl_deep_extend`) cannot unset a key.
+---@param topic table
+---@param note string|nil
+---@param cb fun(success: boolean, err: string|nil)|nil
+function M.set_topic_note(topic, note, cb)
+  M.update_topic_mark(topic, { note = note or "" }, cb)
+end
+
+---Returns the local note stored for a topic, or nil when unset/empty.
+---@param topic table
+---@return string|nil
+function M.topic_note(topic)
+  if topic and topic.note and topic.note ~= "" then
+    return topic.note
+  end
+  return nil
+end
+
 ---Fetch one topic's body/comments/reviews and persist it in the local store.
 ---@param topic table
 ---@param cb fun(success: boolean, err: string|nil, topic: table|nil)|nil

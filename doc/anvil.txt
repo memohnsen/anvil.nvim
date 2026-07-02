@@ -1080,11 +1080,54 @@ anvil.action({popup}, {action}, {args})                       *anvil.action()*
 
 ==============================================================================
 7. Usage                                                          *anvil_usage*
-(TODO)
+
+Open Anvil with the |:Anvil| command or `require("anvil").open()`. The status
+buffer (see |anvil_status_buffer|) is the hub: it shows the current branch,
+staged/unstaged/untracked changes, stashes, unpulled/unmerged commits, recent
+commits, and — when the Forge subsystem is active — pull request and issue
+sections.
+
+From the status buffer (and most other Anvil buffers) single keys open
+transient "popup" menus for git operations, in the style of Magit. Press `?`
+to open the help popup, which lists the available popups and their keys. Common
+entry points:
+
+  • `c` commit, `p` pull, `P` push, `f` fetch, `b` branch, `m` merge,
+    `r` rebase, `l` log, `z` stash, `X` reset, `Z` worktree.
+  • `s`/`u` stage/unstage the change under the cursor or selection, `x` discard,
+    `<cr>` open the file, `<tab>` toggle a section/hunk fold.
+  • `N` opens the Forge popup (GitHub pull requests and issues; see
+    |anvil_forge_popup|), and `!` opens the run popup for arbitrary git/shell
+    commands.
+
+Popups act on whatever is under the cursor or visually selected — for example,
+selecting a range of commits in the log buffer and choosing `pick` from the
+cherry-pick popup cherry-picks that range. Popup arguments and the transient
+level can be tuned per-popup with the `<C-x>` bindings documented under
+|anvil_popup_builder|.
 
 ==============================================================================
 Bisect Popup                                               *anvil_bisect_popup*
-(TODO)
+
+Opened with `B` from the status/log buffers or |:Anvil| `kind=bisect`. Drives
+`git bisect` to find the commit that introduced a regression.
+
+Before a bisect is in progress:
+
+Arguments:
+  • `-r` `--no-checkout`     Don't checkout commits during the bisect.
+  • `-p` `--first-parent`    Follow only the first parent of merge commits.
+
+Actions:
+  • `B` Start      Begin a bisect (prompts for known-bad and known-good revs).
+  • `S` Scripted   Start a bisect and drive it with a script/command.
+
+While a bisect is in progress the popup instead offers:
+  • `b` Bad        Mark the current revision as bad.
+  • `g` Good       Mark the current revision as good.
+  • `s` Skip       Skip the current revision.
+  • `S` Run script Automatically bisect using a script/command.
+  • `r` Reset      End the bisect and return to the original HEAD.
 
 ==============================================================================
 Cherry-Pick Popup                                     *anvil_cherry_pick_popup*
@@ -1699,17 +1742,28 @@ Press `f` inside a topic buffer to pull fresh detail for that topic into the
 local store, then re-render the buffer. Issue and pull request topic buffers
 also support `c` comment with a multi-line post editor, `e` edit title, `b`
 edit body in a multi-line editor, `l` add labels, `a` add assignees, `m` set
-milestone, `+` add a reaction, and `s` toggle open/closed state through `gh`;
-pull request topic buffers additionally support `r` add reviewers, `R` remove
+milestone, `+` add a reaction, and `s` toggle open/closed state through `gh`.
+The `N` forge popup Topic group additionally offers `t c` close as completed,
+`t n` close as not planned, and `t D` close as duplicate for issues, mirroring
+Forge's topic state commands.
+Pull request topic buffers additionally support `r` add reviewers, `R` remove
 reviewers, `V` queue a pending review comment, `A` approve, `v` submit a
 comment review, and `X` request changes. Successful edits refresh the local
 topic detail.
 Local Forge topic marks are available with `M` mark read, `u` mark unread,
 `*` save or unsave, and `d` mark done; list and status buffers show `U`/`S`/`D`
-markers.
+markers. The `N` forge popup Topic group also offers `t N` to set or clear a
+local freetext note on a topic (forge's topic-notes).
 Topic list buffers default to active topics; use `A` all, `U` unread, `S`
 saved, `D` done, `O` open, `C` closed, `a` author, `r` assignee, `l` label,
-and `m` milestone filters.
+and `m` milestone filters. Press `s` to cycle the tablist sort column (number,
+updated, state, title) and `i` to invert the sort direction; the active sort is
+shown in the buffer header.
+For diffview-backed reviews, the `N` forge popup Review group offers `V s`
+start a PR review (opens the pull request's `base...head` diff), `V c` queue a
+pending comment on the diff line under the cursor (file path and LEFT/RIGHT side
+are derived from the diff window), and `V S` submit the queued review as
+comment/approve/request-changes.
 Pull request topic detail also renders inline review threads with file/line
 context, diff hunks, resolution state, and comments. Use `i` to reply to a
 numbered review thread, `x` to resolve it, and `U` to mark it unresolved.
@@ -1726,7 +1780,8 @@ topic buffer; use `S` to apply a numbered suggestion to the local worktree.
     Opens the notification list buffer. In that buffer, use `r` to mark read,
     `u` to mark unread, `s` to save or unsave, `d` to mark done, and `o` to
     open the notification target. Use `g` to refresh, and `A`/`U`/`S`/`D` to
-    filter all/unread/saved/done notifications. Read/unread/save/done state is
+    filter all/unread/saved/done notifications. Use `t` to toggle forge's
+    repository-grouped (nested) style. Read/unread/save/done state is
     stored locally; mark-read also updates GitHub when `gh` is available and
     authenticated.
     Notification polling is opt-in with:
@@ -1748,13 +1803,62 @@ topic buffer; use `S` to apply a numbered suggestion to the local worktree.
 ==============================================================================
 Log Popup                                                     *anvil_log_popup*
 
-(TODO)
+Opened with `l` from most Anvil buffers or |:AnvilLog|. Runs `git log` and
+opens the result in the |anvil_log_buffer|.
+
+Arguments:                                               *anvil_log_popup_args*
+  Commit Limiting:
+  • `-n` `--max-count`   Limit the number of commits (default 256).
+  • `-A` `--author`      Limit to a given author.
+  • `-F` `--grep`        Search commit messages.
+  • `-G` / `-S`          Search added/removed changes / occurrences.
+  • `-L`                 Trace the evolution of a line range.
+  • `-s` / `-u`          Limit to commits since / until a date.
+  • `=m` `--no-merges`   Omit merge commits.
+  • `=p` `--first-parent`  Follow only the first parent.
+  • `-i` `--invert-grep`   Invert the message search.
+  History Simplification:
+  • `-D` `--simplify-by-decoration`  Simplify to the decorated history.
+  • `-`                  Limit to a set of files (picker).
+  • `-f` `--follow`      Follow renames for a single file.
+  Commit Ordering:
+  • `-r` `--reverse`     Reverse the order.
+  • `-o`                 Order commits (topo/author-date/date).
+  • `=R` `--reflog`      List the reflog.
+  Formatting:
+  • `=g` `--graph`       Show the commit graph.
+  • `=c` `--color`       Colour the graph.
+  • `=d` `--decorate`    Show ref names.
+  • `=S` `--show-signature`  Show signatures.
+
+Actions:                                              *anvil_log_popup_actions*
+  Log:
+  • `l` current          Log the current branch (or detached HEAD).
+  • `h` HEAD             Log HEAD.
+  • `u` related          Log commits related to the current branch.
+  • `o` other            Log another branch/tag/ref (picker).
+  • `L` local branches   Log all local branches.
+  • `b` all branches     Log all local and remote branches.
+  • `a` all references   Log everything (`--all`).
+  Reflog:
+  • `r` current          Reflog for the current branch.
+  • `H` HEAD             Reflog for HEAD.
+  • `O` other            Reflog for another branch (picker).
+
+Inside the log buffer, pressing `l` again re-opens this popup scoped to that
+buffer, re-running the log in place (magit's `magit-log-refresh`); see
+|anvil_log_buffer|.
 
 ==============================================================================
 Merge Popup                                                 *anvil_merge_popup*
 
 Arguments:                                             *anvil_merge_popup_args*
-  (TODO)
+  • `-f` `--ff-only`         Fast-forward only (refuse to create a merge commit).
+  • `-n` `--no-ff`           Always create a merge commit.
+  • `-s` `--strategy`        Merge strategy (e.g. ort, recursive, octopus).
+  • `-X` `--strategy-option` Strategy-specific option (e.g. ours, theirs).
+  • `-A` `--Xdiff-algorithm` Diff algorithm for the merge.
+  • `-S` `--gpg-sign`        Sign the merge commit with GPG.
 
 Actions:                                            *anvil_merge_popup_actions*
   • Merge                                                   *anvil_merge_merge*
@@ -2630,11 +2734,44 @@ Commands:                                               *anvil_editor_commands*
 
 ==============================================================================
 Log Buffer                                                   *anvil_log_buffer*
-(TODO)
+
+The log buffer lists commits, optionally as a graph. It opens from the Log
+popup (see |anvil_log_popup|) or |:AnvilLog|.
+
+Mappings (normal mode; popup keys follow |anvil_setup_mappings|):
+  • `<cr>`         Open the commit under the cursor in the Commit Buffer.
+  • `l`            Re-open the Log popup scoped to this buffer, so adjusting
+                   arguments re-runs the log in place instead of opening a new
+                   split (magit's `magit-log-refresh`).
+  • `+`            Load more commits (fetches the next page).
+  • `o`            Open the commit under the cursor in the configured git
+                   service (requires Neovim >= 0.10 for |vim.ui.open|).
+  • `Y`            Yank details from the commit(s) under the cursor/selection.
+  • `<tab>`        Toggle folding for the commit under the cursor.
+  • `q` / `<esc>`  Close the log buffer.
+
+The log buffer also exposes the commit-oriented popups on their usual keys,
+acting on the commit under the cursor (or the visual selection): cherry-pick,
+branch, commit, fetch, merge, push, rebase, remote, revert, reset, tag, pull,
+bisect, and diff.
 
 ==============================================================================
 Reflog Buffer                                             *anvil_reflog_buffer*
-(TODO)
+
+Lists reflog entries for a branch or HEAD. Opened from the Log popup Reflog
+actions (see |anvil_log_popup_actions|).
+
+Mappings (normal mode; popup keys follow |anvil_setup_mappings|):
+  • `<cr>`         Open the entry's commit in the |anvil_commit_buffer|.
+  • `o`            Open the entry's commit in the configured git service
+                   (requires Neovim >= 0.10 for |vim.ui.open|).
+  • `Y`            Yank the commit hash under the cursor.
+  • `q` / `<esc>`  Close the reflog buffer.
+
+Like the log buffer, the reflog buffer exposes the commit-oriented popups on
+their usual keys, acting on the entry under the cursor (or selection):
+cherry-pick, branch, commit, fetch, merge, push, rebase, remote, revert, reset,
+tag, pull, bisect, and diff.
 
 ==============================================================================
 Commit Buffer                                             *anvil_commit_buffer*
@@ -2693,10 +2830,25 @@ Mappings (normal mode):
       - `<C-x>s` Save current popup arguments as defaults.
       - `<C-x>p` Cycle previous argument histories for the popup.
       - `<C-x>r` Reset saved defaults for the popup.
+      - `<C-x>l` Cycle the transient display level (1/4/7), hiding argument
+        suffixes tagged above the current level (magit transient levels;
+        suffixes default to level 1).
 
 ==============================================================================
 Refs Buffer                                                 *anvil_refs_buffer*
-(TODO)
+
+Lists local branches, remote branches, and tags. Opened with `y` ("ShowRefs")
+from the status buffer.
+
+Mappings (normal mode; popup keys follow |anvil_setup_mappings|):
+  • `x`            Delete the branch under the cursor or selection
+                   (configurable via `refs_view.DeleteBranch`).
+  • `<cr>`         Open/go to the ref under the cursor.
+  • `q` / `<esc>`  Close the refs buffer.
+
+The ref under the cursor (or the visual selection) is used as input for the
+commit-oriented popups on their usual keys: cherry-pick, branch, commit, push,
+rebase, revert, reset, remote, tag, pull, fetch, bisect, and diff.
 
 ==============================================================================
 Rebase Todo Buffer                                   *anvil_rebase_todo_buffer*
@@ -2728,6 +2880,8 @@ The following keys are available in the blame buffer:
 • `<cr>`  Open the hunk's commit in the Commit Buffer
 • `b`/`B` Blame from blame: re-blame the file at the commit *before* the
           hunk's commit (rename-aware)
+• `c`     Cycle the heading style: full (sha author date summary), compact
+          (sha date), author (sha author), mirroring magit-blame-cycle-style
 • `n`     Jump to next hunk heading
 • `p`     Jump to previous hunk heading
 • `Y`     Yank the hunk's full sha (uses the status `YankSelected` mapping)
@@ -2743,6 +2897,13 @@ popup instance as its argument:
     local function my_action(popup)
       -- You can access the popup state (enabled flags) like so:
       local cli_args = popup:get_arguments()
+
+      -- The numeric prefix argument (Neovim's count, the analog of magit's
+      -- `C-u`) is available to every action; e.g. `3<key>` gives a prefix of 3.
+      if popup:has_prefix() then
+        local n = popup:get_prefix()
+        vim.notify("Invoked with prefix " .. n)
+      end
 
       -- You can use Anvil's git abstraction for many common operations
       -- local git = require("anvil.lib.git")

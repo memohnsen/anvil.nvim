@@ -1803,6 +1803,29 @@ M.n_prev_section = function(self)
   end
 end
 
+---Jump to a section chosen from a picker (magit's `magit-section-jump` / `j`).
+---@param self StatusBuffer
+---@return fun(): nil
+M.n_goto_section = function(self)
+  return function()
+    local sections = self.buffer.ui:section_list()
+    if #sections == 0 then
+      return
+    end
+
+    vim.ui.select(sections, {
+      prompt = "Jump to section",
+      format_item = function(section)
+        return section.name
+      end,
+    }, function(choice)
+      if choice then
+        self.buffer:move_cursor(choice.first + 1)
+      end
+    end)
+  end
+end
+
 ---@param self StatusBuffer
 ---@return fun(): nil
 M.n_parent_section = function(self)

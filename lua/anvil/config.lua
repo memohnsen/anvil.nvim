@@ -243,6 +243,7 @@ end
 ---| "NextSection"
 ---| "PreviousSection"
 ---| "ParentSection"
+---| "GoToSection"
 ---| false
 ---| fun()
 
@@ -810,6 +811,7 @@ function M.get_default_values()
         ["n"] = "NextSection",
         ["p"] = "PreviousSection",
         ["^"] = "ParentSection",
+        ["J"] = "GoToSection",
       },
     },
   }

@@ -69,6 +69,35 @@ function M.is_open()
   return (M.instance and M.instance.buffer and M.instance.buffer:is_visible()) == true
 end
 
+---Whether this buffer instance is still the live, visible log view.
+---@return boolean
+function M:is_alive()
+  return (M.instance == self and self.buffer and self.buffer:is_visible()) == true
+end
+
+---Re-renders this log view in place with new arguments. Used by the in-buffer
+---`L` refresh binding (magit's `magit-log-refresh`) so tweaking log arguments
+---updates the existing buffer instead of opening a new split.
+---@param commits CommitLogEntry[]
+---@param internal_args table
+---@param files string[]|nil
+---@param fetch_func fun(offset: number): CommitLogEntry[]
+---@param header string
+---@param remotes string[]
+function M:refresh_with(commits, internal_args, files, fetch_func, header, remotes)
+  self.commits = commits
+  self.internal_args = internal_args
+  self.files = files
+  self.fetch_func = fetch_func
+  self.header = header
+  self.remotes = remotes
+
+  if self.buffer then
+    self.buffer:set_header(header)
+    self.buffer.ui:render(unpack(ui.View(self.commits, self.remotes, self.internal_args)))
+  end
+end
+
 function M:open()
   if M.is_open() then
     M.instance.buffer:focus()
@@ -130,6 +159,11 @@ function M:open()
         end),
       },
       n = {
+        -- Reopen the log popup scoped to this buffer so adjusting arguments
+        -- re-runs the log in place (magit's `magit-log-refresh`).
+        [popups.mapping_for("LogPopup")] = popups.open("log", function(p)
+          p { refresh_target = self }
+        end),
         [commit_view_maps["OpenCommitLinkInBrowser"]] = function()
           if not vim.ui.open then
             notification.warn("Requires Neovim >= 0.10")

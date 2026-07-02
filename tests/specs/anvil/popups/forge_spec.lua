@@ -22,6 +22,9 @@ describe("forge popup", function()
     local popup = forge_popup.create({})
 
     assert.are.same({
+      "VS",
+      "Vc",
+      "Vs",
       "bF",
       "bI",
       "bP",
@@ -48,14 +51,18 @@ describe("forge popup", function()
       "pr",
       "pv",
       "t*",
+      "tD",
       "tM",
+      "tN",
       "t_",
       "ta",
       "tb",
+      "tc",
       "td",
       "te",
       "tl",
       "tm",
+      "tn",
       "tr",
       "ts",
       "tu",

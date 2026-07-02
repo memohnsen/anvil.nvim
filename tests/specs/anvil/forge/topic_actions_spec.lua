@@ -193,4 +193,33 @@ describe("forge topic actions", function()
     assert.True(stored.saved)
     assert.True(stored.done)
   end)
+
+  it("stores and clears a local topic note", function()
+    local repo = { host = "github.com", owner = "anvil-test", name = "topic-note-actions" }
+    client.get_repo = function()
+      return repo
+    end
+
+    assert.True(store.save(repo, {
+      issues = {
+        { kind = "issue", number = 44, title = "Noted" },
+      },
+    }))
+
+    local topic = { kind = "issue", number = 44, title = "Noted" }
+
+    forge.set_topic_note(topic, "follow up next week", function(success)
+      assert.True(success)
+    end)
+    assert.are.equal("follow up next week", store.get_topics(repo).issues[1].note)
+    assert.are.equal("follow up next week", forge.topic_note(store.get_topics(repo).issues[1]))
+
+    -- Clearing empties the note, and topic_note reports it as absent.
+    local cleared = store.get_topics(repo).issues[1]
+    forge.set_topic_note(cleared, "", function(success)
+      assert.True(success)
+    end)
+    assert.are.equal("", store.get_topics(repo).issues[1].note)
+    assert.is_nil(forge.topic_note(store.get_topics(repo).issues[1]))
+  end)
 end)

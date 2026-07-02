@@ -48,4 +48,60 @@ describe("popup transient state", function()
     action.callback(instance)
     assert.are.same(1, invoked)
   end)
+
+  it("exposes the numeric prefix argument to actions (C-u analog)", function()
+    local instance = popup
+      .builder()
+      :name("AnvilPrefixArgSpecPopup")
+      :switch("v", "verbose", "Verbose")
+      :build()
+
+    -- No prefix by default.
+    assert.are.equal(0, instance:get_prefix())
+    assert.is_false(instance:has_prefix())
+
+    -- Simulate the capture that the action mapping performs.
+    instance.state.prefix = 3
+    assert.are.equal(3, instance:get_prefix())
+    assert.is_true(instance:has_prefix())
+  end)
+
+  it("filters argument suffixes by transient display level (C-x l)", function()
+    local ui = require("anvil.lib.popup.ui")
+
+    local instance = popup
+      .builder()
+      :name("AnvilTransientLevelSpecPopup")
+      :switch("v", "verbose", "Verbose")
+      :switch("z", "advanced", "Advanced", { level = 5 })
+      :option("m", "message", "", "Message", { level = 7 })
+      :build()
+
+    -- Default level is magit's 4.
+    assert.are.equal(4, instance.state.display_level)
+    assert.are.equal(1, instance.state.args[1].level)
+    assert.are.equal(5, instance.state.args[2].level)
+    assert.are.equal(7, instance.state.args[3].level)
+
+    -- At the default level, only the level-1 switch shows.
+    assert.is_true(ui.arg_visible(instance.state.args[1], instance.state.display_level))
+    assert.is_false(ui.arg_visible(instance.state.args[2], instance.state.display_level))
+    assert.is_false(ui.arg_visible(instance.state.args[3], instance.state.display_level))
+
+    -- Cycle 4 -> 7: everything visible.
+    instance:cycle_level()
+    assert.are.equal(7, instance.state.display_level)
+    assert.is_true(ui.arg_visible(instance.state.args[2], instance.state.display_level))
+    assert.is_true(ui.arg_visible(instance.state.args[3], instance.state.display_level))
+
+    -- Cycle 7 -> 1: only level-1 visible.
+    instance:cycle_level()
+    assert.are.equal(1, instance.state.display_level)
+    assert.is_true(ui.arg_visible(instance.state.args[1], instance.state.display_level))
+    assert.is_false(ui.arg_visible(instance.state.args[2], instance.state.display_level))
+
+    -- Cycle 1 -> 4: back to default.
+    instance:cycle_level()
+    assert.are.equal(4, instance.state.display_level)
+  end)
 end)

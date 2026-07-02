@@ -621,6 +621,55 @@ function M.toggle_topic_state(_)
   run_gh { "gh", cli, action, tostring(topic.number) }
 end
 
+--- Closes an issue with a specific GitHub state reason. Mirrors magit-forge's
+--- `forge-topic-state-set-completed` / `-unplanned`. GitHub state reasons only
+--- apply to issues, so pull requests are excluded.
+---@param reason string GitHub close reason ("completed" or "not planned")
+---@param prompt string
+local function close_issue_with_reason(reason, prompt)
+  if not gh_repo() then
+    return
+  end
+
+  local topic = pick_topic("issues", prompt)
+  if not topic then
+    return
+  end
+
+  return run_gh { "gh", "issue", "close", tostring(topic.number), "--reason", reason }
+end
+
+function M.close_topic_completed(_)
+  close_issue_with_reason("completed", "Close issue as completed")
+end
+
+function M.close_topic_unplanned(_)
+  close_issue_with_reason("not planned", "Close issue as not planned")
+end
+
+--- Marks an issue as a duplicate of another. GitHub's CLI has no native
+--- duplicate close reason, so this closes the issue as "not planned" and leaves
+--- a "Duplicate of #N" comment, matching how forge records duplicates.
+function M.close_topic_duplicate(_)
+  if not gh_repo() then
+    return
+  end
+
+  local topic = pick_topic("issues", "Mark issue as duplicate")
+  if not topic then
+    return
+  end
+
+  local original = input.get_user_input("Duplicate of (issue number or #N)")
+  if not original or original == "" then
+    return
+  end
+
+  local ref = original:gsub("^#", "")
+  run_gh { "gh", "issue", "comment", tostring(topic.number), "--body", ("Duplicate of #%s"):format(ref) }
+  return run_gh { "gh", "issue", "close", tostring(topic.number), "--reason", "not planned" }
+end
+
 function M.mark_topic_read(_)
   local topic = pick_any_topic("Mark topic read", { include_discussions = true })
   if topic then
@@ -654,6 +703,83 @@ function M.mark_topic_done(_)
   if topic then
     forge.mark_topic_done(topic)
   end
+end
+
+function M.set_topic_note(_)
+  local topic = pick_any_topic("Set note on topic", { include_discussions = true })
+  if not topic then
+    return
+  end
+
+  local note = input.get_user_input("Note (empty to clear)", { default = forge.topic_note(topic) or "" })
+  if note == nil then
+    return
+  end
+
+  forge.set_topic_note(topic, note, function(success, err)
+    if success then
+      notification.info(note == "" and "Forge: cleared topic note" or "Forge: saved topic note")
+    else
+      notification.error("Forge: " .. (err or "failed to save topic note"))
+    end
+  end)
+end
+
+-- PR review flow (diffview-backed), PLAN.md §2.6.
+
+function M.start_review(_)
+  if not gh_repo() then
+    return
+  end
+
+  local topic = pick_topic("pullreqs", "Review pull request")
+  if topic then
+    require("anvil.forge.review").start(topic)
+  end
+end
+
+function M.review_comment_at_cursor(_)
+  local review = require("anvil.forge.review")
+  if not review.get_topic() then
+    notification.warn("Forge: start a pull request review first (N V s)")
+    return
+  end
+
+  local body = input.get_user_input("Review comment")
+  if not body or body == "" then
+    return
+  end
+
+  local ok, err = review.comment_at_cursor(body)
+  if ok then
+    notification.info("Forge: queued pending review comment")
+  else
+    notification.error("Forge: " .. (err or "failed to queue review comment"))
+  end
+end
+
+function M.submit_review(_)
+  local review = require("anvil.forge.review")
+  if not review.get_topic() then
+    notification.warn("Forge: start a pull request review first (N V s)")
+    return
+  end
+
+  local events = { "&1. Comment", "&2. Approve", "&3. Request changes", "&4. Cancel" }
+  local choice = input.get_choice("Submit review as", { values = events, default = #events })
+  local event_name = ({ ["1"] = "COMMENT", ["2"] = "APPROVE", ["3"] = "REQUEST_CHANGES" })[choice]
+  if not event_name then
+    return
+  end
+
+  local body = input.get_user_input("Review summary (optional)") or ""
+  review.submit(event_name, body, function(success, err)
+    if success then
+      notification.info("Forge: review submitted")
+    else
+      notification.error("Forge: " .. (err or "failed to submit review"))
+    end
+  end)
 end
 
 return M

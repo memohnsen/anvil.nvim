@@ -43,6 +43,19 @@ function M.new(state)
   return instance
 end
 
+-- Returns the numeric prefix argument the action was invoked with (Neovim's
+-- count, the analog of magit's `C-u`). 0 when no prefix was given.
+---@return integer
+function M:get_prefix()
+  return self.state.prefix or 0
+end
+
+-- Whether the action was invoked with a non-zero numeric prefix argument.
+---@return boolean
+function M:has_prefix()
+  return (self.state.prefix or 0) > 0
+end
+
 -- Returns a table of strings, each representing a toggled option/switch in the popup. Filters out internal arguments.
 -- Formatted for consumption by cli:
 -- Option: --name=value
@@ -224,6 +237,25 @@ function M:close()
     self.buffer:close()
     self.buffer = nil
   end
+end
+
+-- Transient display levels cycled by `C-x l`, mirroring magit's low/default/all
+-- levels. Suffixes tagged above the current level are hidden.
+M.LEVELS = { 1, 4, 7 }
+
+-- Cycle the transient display level (magit `C-x l`).
+---@return nil
+function M:cycle_level()
+  local current = self.state.display_level or 4
+  local next_level = M.LEVELS[1]
+  for i, level in ipairs(M.LEVELS) do
+    if level == current then
+      next_level = M.LEVELS[(i % #M.LEVELS) + 1]
+      break
+    end
+  end
+
+  self.state.display_level = next_level
 end
 
 -- Toggle a switch on/off
@@ -453,12 +485,16 @@ function M:mappings()
         self:reset_defaults()
         self:refresh()
       end,
+      ["<C-x>l"] = function()
+        self:cycle_level()
+        self:refresh()
+      end,
     },
   }
 
   local arg_prefixes = {}
   for _, arg in pairs(self.state.args) do
-    if arg.id then
+    if arg.id and (arg.level or 1) <= (self.state.display_level or 4) then
       arg_prefixes[arg.key_prefix] = true
       mappings.n[arg.id] = a.void(function()
         if arg.type == "switch" then
@@ -504,6 +540,11 @@ function M:mappings()
       elseif action.callback then
         for _, key in ipairs(action.keys) do
           mappings.n[key] = a.void(function()
+            -- Capture the numeric prefix (Neovim's analog of magit's `C-u`)
+            -- synchronously before any await or close, so actions can branch on
+            -- it via `popup:get_prefix()` / `popup:has_prefix()`.
+            self.state.prefix = vim.v.count
+
             logger.debug(string.format("[POPUP]: Invoking action %q of %s", key, self.state.name))
             if not action.persist_popup then
               logger.debug("[POPUP]: Closing popup")

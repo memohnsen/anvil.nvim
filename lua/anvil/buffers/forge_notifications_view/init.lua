@@ -41,13 +41,23 @@ function M.new(notifications)
   return setmetatable({
     notifications = notifications or {},
     filter = "active",
+    grouped = false,
+    -- Maps a rendered (1-based) buffer line to its notification, so cursor
+    -- lookups stay correct in both the flat and repository-grouped styles.
+    line_items = {},
     visible_notifications = visible(notifications or {}, "active"),
     buffer = nil,
   }, M)
 end
 
 function M:item_at_cursor()
-  return self.visible_notifications[vim.fn.line(".") - 4]
+  return self.line_items[vim.fn.line(".")]
+end
+
+---Toggles between the flat list and forge's repository-grouped (nested) style.
+function M:toggle_grouping()
+  self.grouped = not self.grouped
+  self:render()
 end
 
 function M:replace_item(updated)
@@ -92,9 +102,42 @@ function M:render(buffer)
   end
 
   local title = "Forge Notifications"
-  local lines = { title, string.rep("=", #title), ("Filter: %s"):format(FILTER_LABELS[self.filter] or self.filter), "" }
-  for _, item in ipairs(self.visible_notifications) do
-    table.insert(lines, label(item))
+  local style = self.grouped and "grouped" or "flat"
+  local lines = {
+    title,
+    string.rep("=", #title),
+    ("Filter: %s  Style: %s"):format(FILTER_LABELS[self.filter] or self.filter, style),
+    "",
+  }
+
+  self.line_items = {}
+
+  if self.grouped then
+    -- Preserve first-seen repository order, listing each repo's notifications
+    -- under a header (forge's nested notification style).
+    local order = {}
+    local by_repo = {}
+    for _, item in ipairs(self.visible_notifications) do
+      local repo = item.repository or "(unknown)"
+      if not by_repo[repo] then
+        by_repo[repo] = {}
+        table.insert(order, repo)
+      end
+      table.insert(by_repo[repo], item)
+    end
+
+    for _, repo in ipairs(order) do
+      table.insert(lines, repo)
+      for _, item in ipairs(by_repo[repo]) do
+        table.insert(lines, "  " .. label(item))
+        self.line_items[#lines] = item
+      end
+    end
+  else
+    for _, item in ipairs(self.visible_notifications) do
+      table.insert(lines, label(item))
+      self.line_items[#lines] = item
+    end
   end
 
   buffer:set_buffer_option("modifiable", true)
@@ -153,6 +196,9 @@ function M:open(kind)
         end,
         ["g"] = function()
           self:refresh()
+        end,
+        ["t"] = function()
+          self:toggle_grouping()
         end,
         ["A"] = function()
           self:set_filter("all")

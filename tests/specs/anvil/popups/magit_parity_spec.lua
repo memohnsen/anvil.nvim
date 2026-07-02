@@ -119,4 +119,28 @@ describe("Magit parity popups", function()
 
     popup:close()
   end)
+
+  it("threads a refresh target through the log popup env (magit-log-refresh)", function()
+    local target = { marker = "log-view" }
+    local popup = require("anvil.popups.log").create({ refresh_target = target })
+
+    assert.are.equal(target, popup.state.env.refresh_target)
+
+    popup:close()
+  end)
+
+  it("builds the log popup with no env argument", function()
+    local popup = require("anvil.popups.log").create()
+
+    assert.is_nil(popup.state.env.refresh_target)
+
+    popup:close()
+  end)
+
+  it("exposes an in-place refresh API on the log view buffer", function()
+    local LogViewBuffer = require("anvil.buffers.log_view")
+
+    assert.are.equal("function", type(LogViewBuffer.refresh_with))
+    assert.are.equal("function", type(LogViewBuffer.is_alive))
+  end)
 end)

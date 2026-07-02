@@ -127,6 +127,10 @@ function M.new(builder_fn)
       actions = { {} },
       env = {},
       keys = {},
+      -- Transient display level (magit `C-x l`). Suffixes are tagged with a
+      -- level (default 1); those above the current display level are hidden.
+      -- Magit's default level is 4.
+      display_level = 4,
     },
     builder_fn = builder_fn,
   }
@@ -266,6 +270,7 @@ function M:switch(key, cli, description, opts)
     cli_suffix = opts.cli_suffix,
     persisted = opts.persisted,
     options = opts.options,
+    level = opts.level or 1,
     incompatible = util.build_reverse_lookup(opts.incompatible),
     dependent = util.build_reverse_lookup(opts.dependent),
   })
@@ -335,6 +340,7 @@ function M:option(key, cli, value, description, opts)
     choices = opts.choices,
     default = opts.default,
     separator = opts.separator,
+    level = opts.level or 1,
     dependent = util.build_reverse_lookup(opts.dependent),
     incompatible = util.build_reverse_lookup(opts.incompatible),
     fn = opts.fn,

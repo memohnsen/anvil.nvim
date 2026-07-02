@@ -383,6 +383,18 @@ function Ui:first_section()
   return self.item_index[1]
 end
 
+---Lists the top-level sections and their starting lines, for jump-to-section.
+---@return { name: string, first: number }[]
+function Ui:section_list()
+  local out = {}
+  for _, loc in ipairs(self.item_index or {}) do
+    if loc.name and loc.first then
+      table.insert(out, { name = loc.name, first = loc.first })
+    end
+  end
+  return out
+end
+
 ---@return Component|nil
 function Ui:get_current_section(line)
   line = line or vim.api.nvim_win_get_cursor(0)[1]

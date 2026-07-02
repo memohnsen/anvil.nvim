@@ -53,6 +53,7 @@ function M.new(file_path, rev)
     hunks = {},
     heading_lines = {},
     hunk_by_heading = {},
+    style = ui.STYLES[1],
     buffer = nil,
   }
 
@@ -161,10 +162,25 @@ function M:reblame(rev, file)
   self.hunks = hunks
   build_index(self)
 
-  self.buffer.ui:render(unpack(ui.View(self.hunks)))
+  self.buffer.ui:render(unpack(ui.View(self.hunks, self.style)))
   self.buffer:win_call(vim.cmd, "normal! gg")
 
   notification.info(("Blaming %s at %s"):format(file, rev or "worktree"))
+end
+
+---Cycles the blame heading style (magit's `magit-blame-cycle-style`).
+function M:cycle_style()
+  local index = 1
+  for i, style in ipairs(ui.STYLES) do
+    if style == self.style then
+      index = i
+      break
+    end
+  end
+
+  self.style = ui.STYLES[(index % #ui.STYLES) + 1]
+  self.buffer.ui:render(unpack(ui.View(self.hunks, self.style)))
+  notification.info("Blame style: " .. self.style)
 end
 
 ---Reblames at the commit before the hunk's commit
@@ -267,6 +283,9 @@ function M:open(kind)
 
           require("anvil.buffers.commit_view").new(hunk.oid):open()
         end,
+        ["c"] = function()
+          self:cycle_style()
+        end,
         ["b"] = function()
           local hunk = hunk_for_line(self, self.buffer:cursor_line())
           if hunk then
@@ -314,7 +333,7 @@ function M:open(kind)
       },
     },
     render = function()
-      return ui.View(self.hunks)
+      return ui.View(self.hunks, self.style)
     end,
     after = function(buffer)
       if origin_line then

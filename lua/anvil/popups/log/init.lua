@@ -4,10 +4,12 @@ local actions = require("anvil.popups.log.actions")
 
 local M = {}
 
-function M.create()
+function M.create(env)
+  env = env or {}
   local p = popup
     .builder()
     :name("AnvilLogPopup")
+    :env(env)
     :arg_heading("Commit Limiting")
     :option("n", "max-count", "256", "Limit number of commits", { default = "256", key_prefix = "-" })
     :option("A", "author", "", "Limit to author", { key_prefix = "-" })

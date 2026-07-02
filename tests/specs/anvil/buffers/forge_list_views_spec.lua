@@ -101,6 +101,9 @@ describe("Forge list views", function()
     assert.True(rendered:find("Ping", 1, true) ~= nil)
     assert.True(rendered:find("Done", 1, true) == nil)
 
+    -- In the flat style, the header is 4 lines and the first item maps to line 5.
+    assert.are.equal("n1", view.line_items[5].id)
+
     view.buffer:close(true)
   end)
 
@@ -166,5 +169,82 @@ describe("Forge list views", function()
     view.buffer:close(true)
     forge.pull_notifications = original_pull_notifications
     forge.topics = original_topics
+  end)
+
+  it("groups notifications by repository (nested style)", function()
+    local view = require("anvil.buffers.forge_notifications_view").new({
+      { id = "n1", unread = true, reason = "mention", repository = "owner/alpha", title = "One" },
+      { id = "n2", unread = true, reason = "assign", repository = "owner/beta", title = "Two" },
+      { id = "n3", unread = true, reason = "review", repository = "owner/alpha", title = "Three" },
+    })
+
+    view:open("split")
+    view:set_filter("all")
+    view:toggle_grouping()
+
+    local lines = view.buffer:get_lines(0, -1)
+    local rendered = table.concat(lines, "\n")
+    assert.True(rendered:find("Style: grouped", 1, true) ~= nil)
+
+    -- A repository header line appears exactly once per repo, and item rows are
+    -- indented beneath it.
+    local alpha_header, beta_header
+    for i, line in ipairs(lines) do
+      if line == "owner/alpha" then
+        alpha_header = i
+      elseif line == "owner/beta" then
+        beta_header = i
+      end
+    end
+    assert.is_truthy(alpha_header)
+    assert.is_truthy(beta_header)
+
+    -- The line immediately after the alpha header maps to an alpha notification.
+    local first_alpha = view.line_items[alpha_header + 1]
+    assert.is_truthy(first_alpha)
+    assert.are.equal("owner/alpha", first_alpha.repository)
+
+    view.buffer:close(true)
+  end)
+
+  it("sorts topic lists by tablist columns", function()
+    local view = require("anvil.buffers.forge_topics_view").new({
+      { kind = "issue", number = 1, state = "OPEN", title = "Bravo", updated_at = "2024-01-01T00:00:00Z" },
+      { kind = "issue", number = 3, state = "OPEN", title = "Alpha", updated_at = "2024-03-01T00:00:00Z" },
+      { kind = "issue", number = 2, state = "CLOSED", title = "Charlie", updated_at = "2024-02-01T00:00:00Z" },
+    }, "Forge Topics")
+
+    view:open("split")
+    view:set_filter("all")
+
+    local function order()
+      local nums = {}
+      for _, topic in ipairs(view:sorted_topics()) do
+        table.insert(nums, topic.number)
+      end
+      return nums
+    end
+
+    -- Default: number descending.
+    assert.are.same({ 3, 2, 1 }, order())
+    assert.True(table.concat(view.buffer:get_lines(0, -1), "\n"):find("Sort: number v", 1, true) ~= nil)
+
+    -- Reverse direction -> number ascending.
+    view:reverse_sort()
+    assert.are.same({ 1, 2, 3 }, order())
+
+    -- Cycle to updated (descending): newest updated_at first.
+    view:cycle_sort()
+    assert.are.same({ 3, 2, 1 }, order())
+
+    -- Cycle to state (ascending): CLOSED before OPEN.
+    view:cycle_sort()
+    assert.are.equal(2, order()[1])
+
+    -- Cycle to title (ascending): Alpha, Bravo, Charlie -> #3, #1, #2.
+    view:cycle_sort()
+    assert.are.same({ 3, 1, 2 }, order())
+
+    view.buffer:close(true)
   end)
 end)
