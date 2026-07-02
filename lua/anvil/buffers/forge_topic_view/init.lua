@@ -126,75 +126,88 @@ local STATE_HL = {
   MERGED = "AnvilGraphPurple",
 }
 
---- The compact keybinding hint block at the top of the buffer. Keys are
---- highlighted; descriptions are subtle. Pairs wrap to fit ~76 columns.
----@param builder table
----@param topic table
-local function render_hints(builder, topic)
-  local hints = {
-    { "f", "refresh" },
-    { "c", "comment" },
-    { "e", "title" },
-    { "b", "body" },
-    { "l", "labels" },
-    { "a", "assignees" },
-    { "m", "milestone" },
-    { "+", "react" },
-    { "s", "open/close" },
-    { "M", "read" },
-    { "*", "save" },
-    { "d", "done" },
-    { "o", "open URL" },
-    { "Y", "yank URL" },
-    { "q", "close" },
-  }
+--- The full keybinding reference, grouped. Drives both the `?` help popup and
+--- (its `method` fields) the action dispatch. Keys map to `M:<method>()`.
+local KEYMAP_GROUPS = {
+  {
+    heading = "Marks",
+    keys = {
+      { "M", "mark read", "mark_read" },
+      { "u", "mark unread", "mark_unread" },
+      { "*", "toggle save", "toggle_saved" },
+      { "d", "mark done", "mark_done" },
+      { "s", "open/close", "toggle_state" },
+    },
+  },
+  {
+    heading = "Edit",
+    keys = {
+      { "c", "comment", "comment" },
+      { "e", "edit title", "edit_title" },
+      { "b", "edit body", "edit_body" },
+      { "l", "edit labels", "edit_labels" },
+      { "a", "edit assignees", "edit_assignees" },
+      { "m", "set milestone", "edit_milestone" },
+      { "+", "add reaction", "add_reaction" },
+      { "C", "react to comment", "add_comment_reaction" },
+    },
+  },
+  {
+    heading = "Review",
+    pullreq_only = true,
+    keys = {
+      { "r", "add reviewers", "add_reviewers" },
+      { "R", "remove reviewers", "remove_reviewers" },
+      { "V", "add review comment", "add_pending_review_comment" },
+      { "A", "approve", "submit_review", "APPROVE" },
+      { "v", "comment review", "submit_review", "COMMENT" },
+      { "X", "request changes", "submit_review", "REQUEST_CHANGES" },
+      { "i", "reply to thread", "reply_review_thread" },
+      { "I", "react in thread", "add_review_thread_comment_reaction" },
+      { "x", "resolve thread", "resolve_review_thread" },
+      { "U", "unresolve thread", "unresolve_review_thread" },
+      { "S", "apply suggestion", "apply_suggested_change" },
+    },
+  },
+  {
+    heading = "General",
+    keys = {
+      { "f", "refresh detail", "pull_detail" },
+      { "o", "open in browser", "open_url" },
+      { "Y", "yank URL", "yank_url" },
+      { "q", "close", "close" },
+    },
+  },
+}
 
-  if topic.kind == "pullreq" then
-    vim.list_extend(hints, {
-      { "r", "reviewers" },
-      { "V", "review comment" },
-      { "A", "approve" },
-      { "v", "comment review" },
-      { "X", "request changes" },
-      { "i", "reply thread" },
-      { "x", "resolve" },
-      { "S", "apply suggestion" },
-    })
-  end
+-- The single-line hint bar shown at the very top of the buffer. Only the most
+-- common actions; everything else lives behind `?`.
+local ESSENTIAL_HINTS = {
+  { "c", "comment" },
+  { "f", "refresh" },
+  { "o", "open" },
+  { "s", "open/close" },
+  { "?", "help" },
+  { "q", "close" },
+}
 
-  local max_width = 76
+local function render_hints(builder)
   local segments = {}
-  local width = 0
-
-  local function flush()
-    if #segments > 0 then
-      builder:add(segments)
-      segments = {}
-      width = 0
-    end
+  for _, hint in ipairs(ESSENTIAL_HINTS) do
+    table.insert(segments, { text = hint[1], hl = "AnvilPopupSwitchKey" })
+    table.insert(segments, { text = " " .. hint[2] .. "   ", hl = "AnvilSubtleText" })
   end
-
-  for _, hint in ipairs(hints) do
-    local key, desc = hint[1], hint[2]
-    local chunk = #key + 1 + #desc + 3
-    if width > 0 and width + chunk > max_width then
-      flush()
-    end
-    if width == 0 then
-      table.insert(segments, { text = "  " })
-      width = 2
-    end
-    table.insert(segments, { text = key, hl = "AnvilPopupSwitchKey" })
-    table.insert(segments, { text = " " .. desc .. "   ", hl = "AnvilSubtleText" })
-    width = width + chunk
-  end
-  flush()
+  builder:add(segments)
 end
 
 local function build(topic)
   local builder = Builder.new()
 
   local kind = topic.kind == "pullreq" and "Pull request" or topic.kind == "discussion" and "Discussion" or "Issue"
+
+  -- Hint bar first (single line), then the title bar.
+  render_hints(builder)
+  builder:blank()
 
   -- Title bar: "Issue #12  ●OPEN  @author"
   builder:add {
@@ -204,9 +217,6 @@ local function build(topic)
     { text = topic.author and ("  @" .. topic.author) or "", hl = "AnvilPopupBranchName" },
   }
   builder:add { { text = topic.title or "", hl = "AnvilPopupBold" } }
-  builder:blank()
-
-  render_hints(builder, topic)
   builder:blank()
 
   -- Details section.
@@ -809,6 +819,60 @@ function M:toggle_state()
   end)
 end
 
+function M:open_url()
+  if self.topic.url and vim.ui.open then
+    vim.ui.open(self.topic.url)
+  end
+end
+
+function M:yank_url()
+  if self.topic.url then
+    vim.fn.setreg("+", self.topic.url)
+    notification.info("Forge: copied topic URL")
+  end
+end
+
+function M:close()
+  if self.buffer then
+    self.buffer:close()
+  end
+end
+
+--- Open the `?` help popup listing every topic keybinding, grouped. Pressing a
+--- key inside the popup runs the matching action, like the status page help.
+function M:help()
+  local popup = require("anvil.lib.popup")
+  local p = popup.builder():name("AnvilForgeTopicHelpPopup")
+
+  local first = true
+  for _, group in ipairs(KEYMAP_GROUPS) do
+    if not group.pullreq_only or self.topic.kind == "pullreq" then
+      if first then
+        p = p:group_heading(group.heading)
+        first = false
+      else
+        p = p:new_action_group(group.heading)
+      end
+
+      for _, entry in ipairs(group.keys) do
+        local key, desc, method, arg = entry[1], entry[2], entry[3], entry[4]
+        -- The popup closes itself before invoking this callback.
+        p = p:action(key, desc, function()
+          if arg ~= nil then
+            self[method](self, arg)
+          else
+            self[method](self)
+          end
+        end)
+      end
+    end
+  end
+
+  p = p:build()
+  p:show()
+  return p
+end
+
 ---@param kind string|nil
 ---@return ForgeTopicViewBuffer
 function M:open(kind)
@@ -821,6 +885,9 @@ function M:open(kind)
     disable_line_numbers = true,
     mappings = {
       n = {
+        ["?"] = function()
+          self:help()
+        end,
         ["q"] = function(buffer)
           buffer:close()
         end,
@@ -828,14 +895,10 @@ function M:open(kind)
           buffer:close()
         end,
         ["o"] = function()
-          if self.topic.url and vim.ui.open then
-            vim.ui.open(self.topic.url)
-          end
+          self:open_url()
         end,
         ["Y"] = function()
-          if self.topic.url then
-            vim.fn.setreg("+", self.topic.url)
-          end
+          self:yank_url()
         end,
         ["M"] = function()
           self:mark_read()
