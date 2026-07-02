@@ -142,9 +142,27 @@ function M.pull_upstream(_)
   end
 
   notification.info("Pulling upstream topics...")
-  forge.pull_upstream(function(success, err)
+  forge.pull_upstream(function(success, err, upstream)
     if success then
       notification.info("Pulling upstream topics...done")
+
+      -- Upstream topics live under a separate store key so they never become the
+      -- fork's base; surface them explicitly in a list buffer.
+      upstream = upstream or {}
+      local items = {}
+      for _, issue in ipairs(upstream.issues or {}) do
+        table.insert(items, issue)
+      end
+      for _, pullreq in ipairs(upstream.pullreqs or {}) do
+        table.insert(items, pullreq)
+      end
+
+      if #items == 0 then
+        notification.warn("Forge: upstream has no open topics")
+        return
+      end
+
+      require("anvil.buffers.forge_topics_view").new(items, "Forge Upstream Topics"):open()
     elseif err then
       notification.error("Forge: failed to pull upstream topics: " .. err)
     end

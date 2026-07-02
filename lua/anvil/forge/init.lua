@@ -625,7 +625,7 @@ end
 
 ---Pull issues/PRs/discussions from this repo's upstream (fork parent) into the
 ---local store under the `upstream_*` keys. No-ops if the repo is not a fork.
----@param cb fun(success: boolean, err: string|nil)
+---@param cb fun(success: boolean, err: string|nil, topics: table|nil)
 function M.pull_upstream(cb)
   cb = cb or function() end
 
@@ -702,7 +702,12 @@ function M.pull_upstream(cb)
       discussions = #discussions,
     })
 
-    cb(true, nil)
+    cb(true, nil, {
+      pullreqs = pullreqs,
+      issues = issues,
+      discussions = discussions,
+      upstream = parent_nwo,
+    })
   end)
 end
 
