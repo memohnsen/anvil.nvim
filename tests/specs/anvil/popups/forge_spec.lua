@@ -38,6 +38,7 @@ describe("forge popup", function()
       "cp",
       "ff",
       "fn",
+      "fu",
       "ld",
       "li",
       "ln",

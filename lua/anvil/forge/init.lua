@@ -623,6 +623,121 @@ function M.pull(cb)
   end)
 end
 
+---Pull issues/PRs/discussions from this repo's upstream (fork parent) into the
+---local store under the `upstream_*` keys. No-ops if the repo is not a fork.
+---@param cb fun(success: boolean, err: string|nil)
+function M.pull_upstream(cb)
+  cb = cb or function() end
+
+  if not client.available() then
+    notification.warn("Forge: 'gh' executable not found")
+    cb(false, "gh not found")
+    return
+  end
+
+  if not client.authed() then
+    notification.warn("Forge: not authenticated with GitHub. Run 'gh auth login'")
+    cb(false, "not authenticated")
+    return
+  end
+
+  local repo = client.get_repo()
+  if not repo then
+    notification.warn("Forge: no GitHub remote found for this repository")
+    cb(false, "no GitHub remote")
+    return
+  end
+
+  -- Ask GitHub whether this repo is a fork and, if so, what the parent is.
+  local proc = vim.system(
+    { "gh", "repo", "view", ("%s/%s"):format(repo.owner, repo.name), "--json", "parent", "--jq", ".parent.nameWithOwner" },
+    { text = true }
+  )
+  local result = proc:wait(15000)
+  local parent_nwo = result and result.stdout and vim.trim(result.stdout) or ""
+
+  if parent_nwo == "" or parent_nwo == "null" then
+    notification.warn("Forge: this repository is not a fork (no upstream parent found)")
+    cb(false, "not a fork")
+    return
+  end
+
+  local owner, name = parent_nwo:match("^([^/]+)/(.+)$")
+  if not owner or not name then
+    notification.warn("Forge: could not parse upstream repo name: " .. parent_nwo)
+    cb(false, "bad parent name")
+    return
+  end
+
+  local upstream_repo = { host = repo.host, owner = owner, name = name }
+
+  client.graphql(queries.topics, { owner = owner, name = name }, function(data, err)
+    if err or not data or not data.repository then
+      cb(false, err or "no data from upstream")
+      return
+    end
+
+    local pullreqs = util.map((data.repository.pullRequests or {}).nodes or {}, normalize_pullreq)
+    local issues = util.map((data.repository.issues or {}).nodes or {}, normalize_issue)
+    local discussions = util.map((data.repository.discussions or {}).nodes or {}, normalize_discussion)
+
+    local saved = store.save(upstream_repo, {
+      pullreqs = pullreqs,
+      issues = issues,
+      discussions = discussions,
+      synced_at = os.date("!%Y-%m-%dT%H:%M:%SZ"),
+    })
+
+    if not saved then
+      cb(false, "failed to save upstream topics")
+      return
+    end
+
+    event.send("ForgeUpstreamPulled", {
+      upstream = parent_nwo,
+      pullreqs = #pullreqs,
+      issues = #issues,
+      discussions = #discussions,
+    })
+
+    cb(true, nil)
+  end)
+end
+
+---Return topics stored for this repo's upstream parent, or empty tables when
+---the repo is not a fork or upstream topics have not been pulled yet.
+---@return ForgeTopics
+function M.upstream_topics()
+  local ok, repo = pcall(client.get_repo)
+  if not ok or not repo then
+    return { pullreqs = {}, issues = {}, discussions = {}, notifications = {}, synced_at = nil }
+  end
+
+  -- The upstream repo slug is cached by pull_upstream; read it back via gh (sync, cached by OS).
+  local proc = vim.system(
+    { "gh", "repo", "view", ("%s/%s"):format(repo.owner, repo.name), "--json", "parent", "--jq", ".parent.nameWithOwner" },
+    { text = true }
+  )
+  local result = proc:wait(10000)
+  local parent_nwo = result and result.stdout and vim.trim(result.stdout) or ""
+  if parent_nwo == "" or parent_nwo == "null" then
+    return { pullreqs = {}, issues = {}, discussions = {}, notifications = {}, synced_at = nil }
+  end
+
+  local owner, name = parent_nwo:match("^([^/]+)/(.+)$")
+  if not owner or not name then
+    return { pullreqs = {}, issues = {}, discussions = {}, notifications = {}, synced_at = nil }
+  end
+
+  local upstream_repo = { host = repo.host, owner = owner, name = name }
+  local topics_ok, topics = pcall(store.get_topics, upstream_repo)
+  if not topics_ok or not topics then
+    return { pullreqs = {}, issues = {}, discussions = {}, notifications = {}, synced_at = nil }
+  end
+
+  return topics
+end
+
 ---Read topics from the local store. Never touches the network, and never
 ---errors: returns empty lists when unsupported or unsynced.
 ---@return ForgeTopics

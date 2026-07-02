@@ -136,6 +136,21 @@ function M.pull(_)
   end)
 end
 
+function M.pull_upstream(_)
+  if not gh_repo() then
+    return
+  end
+
+  notification.info("Pulling upstream topics...")
+  forge.pull_upstream(function(success, err)
+    if success then
+      notification.info("Pulling upstream topics...done")
+    elseif err then
+      notification.error("Forge: failed to pull upstream topics: " .. err)
+    end
+  end)
+end
+
 function M.pull_notifications(_)
   if not gh_repo() then
     return
