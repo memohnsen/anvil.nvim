@@ -649,8 +649,9 @@ function M.pull_upstream(cb)
   end
 
   -- Ask GitHub whether this repo is a fork and, if so, what the parent is.
+  -- Use `// ""` so jq returns an empty string (not an error) when parent is null.
   local proc = vim.system(
-    { "gh", "repo", "view", ("%s/%s"):format(repo.owner, repo.name), "--json", "parent", "--jq", ".parent.nameWithOwner" },
+    { "gh", "repo", "view", ("%s/%s"):format(repo.owner, repo.name), "--json", "parent", "--jq", '.parent.nameWithOwner // ""' },
     { text = true }
   )
   local result = proc:wait(15000)
@@ -715,7 +716,7 @@ function M.upstream_topics()
 
   -- The upstream repo slug is cached by pull_upstream; read it back via gh (sync, cached by OS).
   local proc = vim.system(
-    { "gh", "repo", "view", ("%s/%s"):format(repo.owner, repo.name), "--json", "parent", "--jq", ".parent.nameWithOwner" },
+    { "gh", "repo", "view", ("%s/%s"):format(repo.owner, repo.name), "--json", "parent", "--jq", '.parent.nameWithOwner // ""' },
     { text = true }
   )
   local result = proc:wait(10000)
