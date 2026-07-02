@@ -1,5 +1,5 @@
-local CommitSelectViewBuffer = require("neogit.buffers.commit_select_view")
-local git = require("neogit.lib.git")
+local CommitSelectViewBuffer = require("anvil.buffers.commit_select_view")
+local git = require("anvil.lib.git")
 
 local M = {
   values = {},

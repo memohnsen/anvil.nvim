@@ -215,7 +215,7 @@ RSpec.describe "Stash Popup", :git, :nvim, :popup do
       # returns the OID of the original stash (OID_A), even after the stash
       # list changes.  This mimics the state left behind by a previous rename
       # (or any earlier call) with timeout = math.huge.
-      nvim.lua("require('neogit.lib.git').rev_parse.abbreviate_commit('stash@{0}')")
+      nvim.lua("require('anvil.lib.git').rev_parse.abbreviate_commit('stash@{0}')")
 
       # Push a second stash on top: stash@{0} = OID_B ("second-stash-content"),
       # stash@{1} = OID_A ("original stash content").

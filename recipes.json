@@ -3,24 +3,24 @@
     "cmd": "nvim --headless -c \"lua require(\\\"plenary.test_harness\\\").test_directory('tests/specs/branch_popup_spec.lua', {minimal_init = \\\"tests/init.lua\\\", sequential = true })\"",
     "kind": "term",
     "env": {
-      "NEOGIT_LOG_CONSOLE": true,
-      "NEOGIT_LOG_LEVEL": "debug"
+      "ANVIL_LOG_CONSOLE": true,
+      "ANVIL_LOG_LEVEL": "debug"
     }
   },
   "test-process": {
     "cmd": "nvim --headless -c \"lua require(\\\"plenary.test_harness\\\").test_directory('./tests/specs/process_spec.lua', {minimal_init = \\\"tests/init.lua\\\", sequential = true })\"",
     "kind": "term",
     "env": {
-      "NEOGIT_LOG_CONSOLE": true,
-      "NEOGIT_LOG_LEVEL": "debug"
+      "ANVIL_LOG_CONSOLE": true,
+      "ANVIL_LOG_LEVEL": "debug"
     }
   },
   "test-all": {
     "cmd": "nvim --headless -c \"lua require(\\\"plenary.test_harness\\\").test_directory('tests/specs', {minimal_init = \\\"tests/init.lua\\\", sequential = true })\"",
     "kind": "term",
     "env": {
-      "NEOGIT_LOG_CONSOLE": true,
-      "NEOGIT_LOG_LEVEL": "debug"
+      "ANVIL_LOG_CONSOLE": true,
+      "ANVIL_LOG_LEVEL": "debug"
     }
   }
 }

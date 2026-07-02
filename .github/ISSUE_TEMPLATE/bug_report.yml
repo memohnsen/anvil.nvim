@@ -1,11 +1,11 @@
 name: Bug report
-description: Report a problem with Neogit
+description: Report a problem with Anvil
 labels: [bug]
 body:
   - type: markdown
     attributes:
       value: |
-        Before reporting: search [existing issues](https://github.com/NeogitOrg/neogit/issues) and make sure that both Neogit and its dependencies are updated to the latest version.
+        Before reporting: search [existing issues](https://github.com/memohnsen/anvil.nvim/issues) and make sure that both Anvil and its dependencies are updated to the latest version.
   - type: textarea
     attributes:
       label: "Description"
@@ -129,11 +129,11 @@ body:
           plenary = "https://github.com/nvim-lua/plenary.nvim.git",
           telescope = "https://github.com/nvim-telescope/telescope.nvim",
           diffview = "https://github.com/sindrets/diffview.nvim",
-          neogit = "https://github.com/NeogitOrg/neogit"
+          anvil = "https://github.com/memohnsen/anvil.nvim"
         })
         -- WARN: Do all plugin setup, test runs, reproductions, etc. AFTER calling setup with a list of plugins!
         -- Basically, do all that stuff AFTER this line.
-        require("neogit").setup({}) -- For instance, setup Neogit
+        require("anvil").setup({}) -- For instance, setup Anvil
     validations:
       required: true
 

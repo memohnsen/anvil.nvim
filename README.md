@@ -1,4 +1,4 @@
-![preview](https://github.com/anvil.nvim/neogit/assets/7228095/d964cbb4-a557-4e97-ac5b-ea571a001f5c)
+![preview](https://github.com/NeogitOrg/neogit/assets/7228095/d964cbb4-a557-4e97-ac5b-ea571a001f5c)
 
 ## About this project
 
@@ -23,7 +23,7 @@ Where this fork goes beyond upstream Anvil today: a built-in **Forge** subsystem
 store synced via `gh`), **git blame** (`:Anvil blame`, magit-blame style), and the
 **run popup** (`!`) for arbitrary git/shell commands and WIP snapshots.
 
-AI Disclosure: Any and all changes to the base neogit repo have been done by Claude Fable and ChatGPT.
+AI Disclosure: Any and all changes to the base anvil repo have been done by Claude Fable and ChatGPT.
 
 ## Installation
 
@@ -36,7 +36,7 @@ Neovim 0.12+ ships a built-in plugin manager, `vim.pack`:
 
 ```lua
 vim.pack.add({
-  "https://github.com/anvil.nvim/neogit",
+  "https://github.com/memohnsen/anvil.nvim",
 
   -- Optional integrations; keep whichever ones you use.
   "https://github.com/sindrets/diffview.nvim",
@@ -74,7 +74,7 @@ vim.pack.add({
   },
   cmd = "Anvil",
   keys = {
-    { "<leader>gg", "<cmd>Anvil<cr>", desc = "Show Neogit UI" }
+    { "<leader>gg", "<cmd>Anvil<cr>", desc = "Show Anvil UI" }
   }
 }
 ```
@@ -117,9 +117,24 @@ use({
 })
 ```
 
+### Vim packages
+
+Anvil can also be installed with Neovim's built-in package support (`:help packages`),
+with no plugin manager at all. Clone it (and any optional dependencies) into a package
+directory on your `packpath`:
+
+```sh
+git clone https://github.com/memohnsen/anvil.nvim \
+  ~/.config/nvim/pack/plugins/start/anvil.nvim
+```
+
+Then call `require("anvil").setup({})` somewhere in your config. Optional integrations
+(diffview, codediff, baleia, telescope, fzf-lua, mini.pick, snacks) can be cloned into
+the same `start` directory.
+
 ## Usage
 
-You can either open Anvil by using the `Neogit` command:
+You can either open Anvil by using the `Anvil` command:
 
 ```vim
 :Anvil             " Open the status buffer in a new tab
@@ -149,40 +164,40 @@ nnoremap <leader>gg <cmd>Anvil<cr>
 
 ```lua
 -- Or via lua api
-vim.keymap.set("n", "<leader>gg", "<cmd>Anvil<cr>", { desc = "Open Neogit UI" })
+vim.keymap.set("n", "<leader>gg", "<cmd>Anvil<cr>", { desc = "Open Anvil UI" })
 ```
 
 Or using the lua api:
 
 ```lua
-local neogit = require('neogit')
+local anvil = require('anvil')
 
 -- open using defaults
-neogit.open()
+anvil.open()
 
 -- open a specific popup
-neogit.open({ "commit" })
+anvil.open({ "commit" })
 
 -- open the forge popup (fetch/browse/list/checkout GitHub PRs and issues)
-neogit.open({ "forge" })
+anvil.open({ "forge" })
 
 -- blame the current file
-neogit.open({ "blame" })
+anvil.open({ "blame" })
 
 -- open as a split
-neogit.open({ kind = "split" })
+anvil.open({ kind = "split" })
 
 -- open with different project
-neogit.open({ cwd = "~" })
+anvil.open({ cwd = "~" })
 
 -- You can map this to a key
-vim.keymap.set("n", "<leader>gg", neogit.open, { desc = "Open Anvil UI" })
+vim.keymap.set("n", "<leader>gg", anvil.open, { desc = "Open Anvil UI" })
 
 -- Wrap in a function to pass additional arguments
 vim.keymap.set(
     "n",
     "<leader>gg",
-    function() neogit.open({ kind = "split" }) end,
+    function() anvil.open({ kind = "split" }) end,
     { desc = "Open Anvil UI" }
 )
 ```
@@ -201,15 +216,15 @@ The `kind` option can be one of the following values:
 
 ## Configuration
 
-You can configure neogit by running the `require('neogit').setup {}` function, passing a table as the argument.
+You can configure anvil by running the `require('anvil').setup {}` function, passing a table as the argument.
 
 <details>
 <summary>Default Config</summary>
 
 ```lua
-local neogit = require("neogit")
+local anvil = require("anvil")
 
-neogit.setup {
+anvil.setup {
   -- Use Treesitter to apply syntax highlighting to diff hunks
   treesitter_diff_highlight = true,
   -- Apply word-diff highlights to diff hunks
@@ -243,7 +258,7 @@ neogit.setup {
   -- Show relative date by default. When set, use `strftime` to display dates
   commit_date_format = nil,
   log_date_format = nil,
-  -- When set, used to format the diff. Requires *baleia* to colorize text with ANSI escape sequences. An example for `Delta` is `{ 'delta', '--width', '117' }`. For `Delta`, hyperlinks must be disabled when called by `neogit`, for text to be colorized properly.
+  -- When set, used to format the diff. Requires *baleia* to colorize text with ANSI escape sequences. An example for `Delta` is `{ 'delta', '--width', '117' }`. For `Delta`, hyperlinks must be disabled when called by `anvil`, for text to be colorized properly.
   log_pager = nil,
   -- Show message with spinning animation when a git command is running.
   process_spinner = false,
@@ -313,7 +328,7 @@ neogit.setup {
   initial_branch_name = "",
   -- Default for rename branch prompt. If not set, the current branch name is used
   initial_branch_rename = nil,
-  -- Change the default way of opening neogit
+  -- Change the default way of opening anvil
   kind = "tab",
   -- Floating window style 
   floating = {
@@ -692,7 +707,7 @@ authenticated (`gh auth login`), and a GitHub remote named `origin` or `upstream
 Everything degrades gracefully when these aren't present: no sections render and
 popup actions explain what's missing.
 
-**How it works:** topics are kept in a local store (`stdpath("data")/neogit/forge/`),
+**How it works:** topics are kept in a local store (`stdpath("data")/anvil/forge/`),
 so the status buffer renders instantly and offline; the network is only touched when
 you sync. If `kkharji/sqlite.lua` is installed, Anvil uses SQLite; otherwise it
 falls back to the JSON store. This mirrors Forge's local-database design.
@@ -746,7 +761,7 @@ See [PLAN.md](PLAN.md).
 Notification polling is opt-in:
 
 ```lua
-require("neogit").setup({
+require("anvil").setup({
   forge = {
     notifications = {
       poll = true,
@@ -772,7 +787,7 @@ When present, they appear in the status buffer under `WIP snapshots`.
 Automatic WIP snapshots are opt-in:
 
 ```lua
-require("neogit").setup({
+require("anvil").setup({
   wip = {
     enabled = true,
     before = true,

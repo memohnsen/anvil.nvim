@@ -11,10 +11,10 @@ RSpec.describe "general things", :git, :nvim do
   popups.each do |popup|
     it "can invoke #{popup} popup without status buffer", :with_remote_origin do
       nvim.keys("q")
-      nvim.lua("require('neogit').open({ '#{popup}' })")
+      nvim.lua("require('anvil').open({ '#{popup}' })")
       sleep(0.1) # Allow popup to open
 
-      expect(nvim.filetype).to eq("NeogitPopup")
+      expect(nvim.filetype).to eq("AnvilPopup")
       expect(nvim.errors).to be_empty
     end
   end

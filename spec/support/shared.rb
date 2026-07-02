@@ -36,7 +36,7 @@ RSpec.shared_examples "popup", :popup do
   end
 
   it "has correct filetype" do
-    expect(nvim.filetype).to eq("NeogitPopup")
+    expect(nvim.filetype).to eq("AnvilPopup")
   end
 
   it "renders view properly" do

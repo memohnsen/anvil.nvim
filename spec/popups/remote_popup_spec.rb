@@ -33,21 +33,21 @@ RSpec.describe "Remote Popup", :git, :nvim, :popup do
       it "allow user to add remote" do
         nvim.keys("a")
         nvim.keys("origin<cr>")
-        nvim.keys("git@github.com:NeogitOrg/neogit.git<cr>")
+        nvim.keys("git@github.com:memohnsen/anvil.nvim.git<cr>")
         expect(git.remote.name).to eq("origin")
-        expect(git.remote.url).to eq("git@github.com:NeogitOrg/neogit.git")
+        expect(git.remote.url).to eq("git@github.com:memohnsen/anvil.nvim.git")
       end
     end
 
     context "with 'origin' set" do
       before do
-        git.config("remote.origin.url", "git@github.com:NeogitOrg/neogit.git")
+        git.config("remote.origin.url", "git@github.com:memohnsen/anvil.nvim.git")
       end
 
       it "auto-populates host/remote" do
         nvim.keys("a")
         nvim.keys("fork<cr>")
-        expect(nvim.screen.last).to start_with("URL for fork: git@github.com:fork/neogit.git")
+        expect(nvim.screen.last).to start_with("URL for fork: git@github.com:fork/anvil.git")
       end
     end
   end
@@ -62,7 +62,7 @@ RSpec.describe "Remote Popup", :git, :nvim, :popup do
 
     context "with a remote configured" do
       before do
-        git.config("remote.origin.url", "git@github.com:NeogitOrg/neogit.git")
+        git.config("remote.origin.url", "git@github.com:memohnsen/anvil.nvim.git")
       end
 
       it "can remove a remote" do
@@ -84,7 +84,7 @@ RSpec.describe "Remote Popup", :git, :nvim, :popup do
 
     context "with a remote configured" do
       before do
-        git.config("remote.origin.url", "git@github.com:NeogitOrg/neogit.git")
+        git.config("remote.origin.url", "git@github.com:memohnsen/anvil.nvim.git")
       end
 
       it "can rename a remote" do
@@ -107,7 +107,7 @@ RSpec.describe "Remote Popup", :git, :nvim, :popup do
 
     context "with a remote configured" do
       before do
-        git.config("remote.origin.url", "git@github.com:NeogitOrg/neogit.git")
+        git.config("remote.origin.url", "git@github.com:memohnsen/anvil.nvim.git")
       end
 
       it "can launch remote config popup" do
@@ -115,7 +115,7 @@ RSpec.describe "Remote Popup", :git, :nvim, :popup do
         nvim.keys("origin<cr>")
         expect(nvim.screen[14..19]).to eq(
           [" Configure remote                                                               ",
-           " u remote.origin.url git@github.com:NeogitOrg/neogit.git                        ",
+           " u remote.origin.url git@github.com:memohnsen/anvil.nvim.git                    ",
            " U remote.origin.fetch unset                                                    ",
            " s remote.origin.pushurl unset                                                  ",
            " S remote.origin.push unset                                                     ",
@@ -135,7 +135,7 @@ RSpec.describe "Remote Popup", :git, :nvim, :popup do
 
     context "with a remote configured" do
       before do
-        git.config("remote.origin.url", "git@github.com:NeogitOrg/neogit.git")
+        git.config("remote.origin.url", "git@github.com:memohnsen/anvil.nvim.git")
       end
 
       it "can launch remote config popup" do

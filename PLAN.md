@@ -1,6 +1,6 @@
 # Plan: A Magit + Forge Clone for Neovim
 
-Goal: evolve this Neogit fork into an exact functional clone of **magit** (git porcelain) with
+Goal: evolve this Anvil fork into an exact functional clone of **magit** (git porcelain) with
 **forge** (GitHub/GitLab integration) baked in as a first-class subsystem — the way forge extends
 magit's status buffer and keymaps — using **octo.nvim** as the reference (and code donor) for the
 GitHub client layer.
@@ -24,7 +24,7 @@ porcelain gaps implemented:
   sparse-checkout, subtree, bundle, shortlog, repos, dispatch, and mergetool popups.
 - Commit popup instant fixup/squash and absorb flows.
 - WIP refs with manual commands plus opt-in automatic before/after snapshots around mutating
-  Neogit git operations, with a WIP snapshot list/apply buffer.
+  Anvil git operations, with a WIP snapshot list/apply buffer.
 - Forge GitHub client through `gh`, local JSON store with optional SQLite backend, status sections,
   topic buffers, topic list buffers, notification buffer, discussions, PR checkout/worktree,
   topic-buffer comment/title/body/label/assignee/milestone/state/reviewer edits, inline PR
@@ -44,7 +44,7 @@ backends beyond GitHub.
 
 ## Part 1 — Magit parity gaps (git core)
 
-Neogit already covers: status, commit, log, diff, branch (+config), push, pull, fetch, merge,
+Anvil already covers: status, commit, log, diff, branch (+config), push, pull, fetch, merge,
 rebase, cherry-pick, revert, reset, stash, tag, remote (+config), bisect, worktree, ignore,
 reflog, refs view, margin, yank, git command history, interactive rebase editor.
 
@@ -70,7 +70,7 @@ reflog, refs view, margin, yank, git command history, interactive rebase editor.
 | `magit-repos` | Implemented repositories overview popup/list | Done |
 | `magit-clone` popup | Implemented clone popup | Done |
 | Revision buffer niceties | `magit-revision-jump`, diff-refresh popup (`D`), log-refresh (`L`) in-buffer | Medium |
-| `magit-reflog` popups | Neogit has reflog view; verify checkout/reset actions from it match magit | Low |
+| `magit-reflog` popups | Anvil has reflog view; verify checkout/reset actions from it match magit | Low |
 
 ### Behavioral/UX parity to audit
 
@@ -82,7 +82,7 @@ reflog, refs view, margin, yank, git command history, interactive rebase editor.
   elsewhere). Define a consistent neovim idiom (count or `g`-prefixed variants) and apply it
   across all popups.
 - **`magit-process-mode`** parity: `$` process buffer with sections per command, kill process —
-  neogit has a console; verify feature-for-feature.
+  anvil has a console; verify feature-for-feature.
 - **Transient parity**: popup argument defaults (`C-x s`), history cycling (`C-x p`), and
   reset (`C-x r`) are implemented through shared popup state; remaining parity is transient
   level filtering (`C-x l`) and exact Magit suffix-level display semantics.
@@ -94,15 +94,15 @@ reflog, refs view, margin, yank, git command history, interactive rebase editor.
 
 Forge's architecture, translated to Lua:
 
-### 2.1 Data layer (forge-db.el → `lua/neogit/forge/db.lua`)
+### 2.1 Data layer (forge-db.el → `lua/anvil/forge/db.lua`)
 - Forge keeps a **local SQLite database** of repos/topics/posts so everything renders instantly
   offline and fetches are incremental. Neovim option: bundle `sqlite.lua` (kkharji) as optional
-  dep, with a JSON-file fallback store (`stdpath("data")/neogit/forge/<repo-hash>.json`).
+  dep, with a JSON-file fallback store (`stdpath("data")/anvil/forge/<repo-hash>.json`).
 - Schema: repository, pullreq, issue, discussion, post/comment, review, label, milestone,
   assignee, notification, mark — mirror forge's closql schema.
 - Incremental sync: store `updated_at` cursors per repo; `forge-pull` fetches only changed topics.
 
-### 2.2 Client layer (forge-github.el / octo `gh/` → `lua/neogit/forge/client/`)
+### 2.2 Client layer (forge-github.el / octo `gh/` → `lua/anvil/forge/client/`)
 - **Adopt octo.nvim's approach**: shell out to `gh` CLI for auth + GraphQL. Port/adapt octo's
   `gh/graphql.lua`, `queries.lua`, `mutations.lua`, `fragments.lua` — this is the highest-leverage
   code reuse available; it's battle-tested against GitHub's API.
@@ -116,11 +116,11 @@ Forge's architecture, translated to Lua:
   - **Pull requests** (open PRs, unread markers)
   - **Issues**
   - **Discussions** (optional, off by default like forge)
-- `<CR>` on a topic opens the topic buffer; sections respect neogit's fold/hide config
+- `<CR>` on a topic opens the topic buffer; sections respect anvil's fold/hide config
   (`config.sections.pullreqs`, `config.sections.issues`).
 - Unread/pending status indicators (forge's topic status: unread/pending/done).
 
-### 2.4 Forge popup (forge-dispatch → `lua/neogit/popups/forge/`)
+### 2.4 Forge popup (forge-dispatch → `lua/anvil/popups/forge/`)
 Bound to `N` (forge's default binding under magit) with subgroups mirroring `forge-dispatch`:
 - **Fetch**: `f f` pull topics for repo, `f n` pull notifications
 - **Create**: `c i` issue, `c p` pull request, `c d` discussion, `c P` post/comment
@@ -138,8 +138,8 @@ Bound to `N` (forge's default binding under magit) with subgroups mirroring `for
 - A rendered buffer per issue/PR/discussion: title, metadata table (state, labels, milestone,
   assignees, review requests, marks), description, comment timeline, review threads.
 - **Port octo's buffer model** (`octo/model/`, `ui/`, writers) but restyle to magit-section
-  aesthetics: foldable sections per comment, neogit keymaps, edit-in-place fields.
-- Post editing via neogit's existing editor buffer machinery (like commit editor): compose
+  aesthetics: foldable sections per comment, anvil keymaps, edit-in-place fields.
+- Post editing via anvil's existing editor buffer machinery (like commit editor): compose
   comment/reply/review in a split, `:w` + close submits (matching forge's post buffers,
   `C-c C-c` semantics).
 - Topic/comment/review-thread comment reactions and resolving threads are implemented;
@@ -180,7 +180,7 @@ Bound to `N` (forge's default binding under magit) with subgroups mirroring `for
 7. **Remaining magit parity** — submodule, patch/am, notes, wip, repos list, clone popup,
    sparse-checkout/subtree/bundle/shortlog.
 8. **Polish pass** — keybinding audit vs magit defaults, transient save/history semantics,
-   prefix-arg idiom, docs (`:h neogit-forge`), vimdoc for every popup.
+   prefix-arg idiom, docs (`:h anvil-forge`), vimdoc for every popup.
 
 ## Part 4 — Key design decisions (recommendations)
 
@@ -188,8 +188,8 @@ Bound to `N` (forge's default binding under magit) with subgroups mirroring `for
   credential handling in the plugin.
 - **Port octo code, don't depend on octo**: the user experience must be one plugin with one
   section/keymap/popup system. Vendor and restyle octo's gh layer, buffer writers, and review
-  engine into `lua/neogit/forge/`; drop octo's separate `:Octo` command surface (optionally keep
-  a thin `:Neogit forge ...` command).
+  engine into `lua/anvil/forge/`; drop octo's separate `:Octo` command surface (optionally keep
+  a thin `:Anvil forge ...` command).
 - **Local-first like forge**: render from the store, sync explicitly (`N f f`) or on timer.
   This is forge's defining trait vs octo (octo fetches on demand) — adopt forge's model.
 - **SQLite optional**: `sqlite.lua` if available, JSON fallback, same store API.

@@ -13,7 +13,7 @@ class NeovimClient # rubocop:disable Metrics/ClassLength
     @pastel   = Pastel.new
   end
 
-  def setup(neogit_config) # rubocop:disable Metrics/MethodLength
+  def setup(anvil_config) # rubocop:disable Metrics/MethodLength
     @instance = attach_child
 
     # Sets up the runtimepath
@@ -26,8 +26,8 @@ class NeovimClient # rubocop:disable Metrics/ClassLength
     lua <<~LUA
       require("plenary")
       require("diffview").setup()
-      require('neogit').setup(#{neogit_config})
-      require('neogit').open()
+      require('anvil').setup(#{anvil_config})
+      require('anvil').open()
     LUA
 
     sleep(0.1) # Seems to be about right
@@ -48,7 +48,7 @@ class NeovimClient # rubocop:disable Metrics/ClassLength
   end
 
   def refresh
-    lua "require('neogit.buffers.status').instance():dispatch_refresh()"
+    lua "require('anvil.buffers.status').instance():dispatch_refresh()"
   end
 
   def screen

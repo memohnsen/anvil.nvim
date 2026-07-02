@@ -6,7 +6,7 @@ require "fileutils"
 RSpec.describe "Status Buffer", :git, :nvim do
   it "renders, raising no errors" do
     expect(nvim.errors).to be_empty
-    expect(nvim.filetype).to eq("NeogitStatus")
+    expect(nvim.filetype).to eq("AnvilStatus")
   end
 
   context "with a file that only has a number as the filename" do
@@ -17,7 +17,7 @@ RSpec.describe "Status Buffer", :git, :nvim do
 
     it "renders, raising no errors" do
       expect(nvim.errors).to be_empty
-      expect(nvim.filetype).to eq("NeogitStatus")
+      expect(nvim.filetype).to eq("AnvilStatus")
     end
   end
 
@@ -32,17 +32,17 @@ RSpec.describe "Status Buffer", :git, :nvim do
 
     it "renders, raising no errors" do
       expect(nvim.errors).to be_empty
-      expect(nvim.filetype).to eq("NeogitStatus")
+      expect(nvim.filetype).to eq("AnvilStatus")
       expect(nvim.screen[6]).to eq("> modified   test 100644 -> 100755                                              ")
     end
   end
 
   context "with disabled mapping and no replacement" do
-    let(:neogit_config) { "{ mappings = { status = { j = false }, popup = { b = false } } }" }
+    let(:anvil_config) { "{ mappings = { status = { j = false }, popup = { b = false } } }" }
 
     it "renders, raising no errors" do
       expect(nvim.errors).to be_empty
-      expect(nvim.filetype).to eq("NeogitStatus")
+      expect(nvim.filetype).to eq("AnvilStatus")
     end
   end
 
@@ -362,7 +362,7 @@ RSpec.describe "Status Buffer", :git, :nvim do
   describe "submodule navigation" do
     let(:submodule_path) { File.join("deps", "nested-submodule") }
     let(:submodule_repo_root) { File.expand_path(submodule_path) }
-    let!(:submodule_source_dir) { Dir.mktmpdir("neogit-submodule-source") }
+    let!(:submodule_source_dir) { Dir.mktmpdir("anvil-submodule-source") }
 
     before do
       initialize_submodule_source
@@ -376,7 +376,7 @@ RSpec.describe "Status Buffer", :git, :nvim do
 
       File.open(File.join(submodule_path, "file.txt"), "a") { _1.puts("local change") }
       nvim.lua(<<~LUA)
-        local status = require("neogit.buffers.status")
+        local status = require("anvil.buffers.status")
         local instance = status.instance()
         if instance then
           status.register(instance, vim.uv.cwd())

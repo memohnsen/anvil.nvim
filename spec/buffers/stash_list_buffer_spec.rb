@@ -22,12 +22,12 @@ RSpec.describe "Stash list Buffer", :git, :nvim do
     )
 
     expect(nvim.errors).to be_empty
-    expect(nvim.filetype).to eq("NeogitStashView")
+    expect(nvim.filetype).to eq("AnvilStashView")
   end
 
   it "can open CommitView" do
     nvim.keys("Zl<enter>")
     expect(nvim.errors).to be_empty
-    expect(nvim.filetype).to eq("NeogitCommitView")
+    expect(nvim.filetype).to eq("AnvilCommitView")
   end
 end

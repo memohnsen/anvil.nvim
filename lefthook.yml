@@ -26,7 +26,7 @@ pre-push:
         - CI: 1
         - GIT_CONFIG_GLOBAL: /dev/null
         - GIT_CONFIG_SYSTEM: /dev/null
-        - NVIM_APPNAME: neogit-test
+        - NVIM_APPNAME: anvil-test
     rspec:
       only:
       - ref: master

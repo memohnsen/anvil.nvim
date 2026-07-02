@@ -1,4 +1,4 @@
-local neogit = require("neogit")
+local anvil = require("anvil")
 local M = {}
 local util = require("tests.util.util")
 
@@ -20,8 +20,8 @@ function M.setup_bare_repo()
     util.system { "mv", workspace_dir .. "/.repo/" .. name, workspace_dir .. "/" }
   end
 
-  util.system { "git", "config", "user.email", "test@neogit-test.test" }
-  util.system { "git", "config", "user.name", "Neogit Test" }
+  util.system { "git", "config", "user.email", "test@anvil-test.test" }
+  util.system { "git", "config", "user.name", "Anvil Test" }
   util.system { "git", "add", "." }
   util.system { "git", "commit", "-m", "temp commit to be soft unstaged later" }
 
@@ -44,8 +44,8 @@ function M.prepare_repository()
   util.system { "git", "checkout", "second-branch" }
   util.system { "git", "switch", "master" }
   util.system { "git", "config", "remote.origin.url", "git@github.com:example/example.git" }
-  util.system { "git", "config", "user.email", "test@neogit-test.test" }
-  util.system { "git", "config", "user.name", "Neogit Test" }
+  util.system { "git", "config", "user.email", "test@anvil-test.test" }
+  util.system { "git", "config", "user.name", "Anvil Test" }
 
   return working_dir
 end
@@ -53,8 +53,8 @@ end
 function M.in_prepared_repo(cb)
   return function()
     M.prepare_repository()
-    require("neogit").setup {}
-    vim.cmd("Neogit")
+    require("anvil").setup {}
+    vim.cmd("Anvil")
   end
 end
 

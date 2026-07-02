@@ -6,6 +6,6 @@ RSpec.describe "Git Command History Buffer", :git, :nvim do
   it "renders, raising no errors" do
     nvim.keys("$")
     expect(nvim.errors).to be_empty
-    expect(nvim.filetype).to eq("NeogitGitCommandHistory")
+    expect(nvim.filetype).to eq("AnvilGitCommandHistory")
   end
 end

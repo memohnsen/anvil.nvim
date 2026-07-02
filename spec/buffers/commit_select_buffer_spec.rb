@@ -6,6 +6,6 @@ RSpec.describe "Commit Select Buffer", :git, :nvim do
   it "renders, raising no errors" do
     nvim.keys("AA")
     expect(nvim.errors).to be_empty
-    expect(nvim.filetype).to eq("NeogitCommitSelectView")
+    expect(nvim.filetype).to eq("AnvilCommitSelectView")
   end
 end

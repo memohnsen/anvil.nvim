@@ -16,8 +16,8 @@ RSpec.describe "Branch Config Popup", :git, :nvim, :popup do
       " Configure repository defaults                                                  ",
       " R pull.rebase [true|false]                                                     ",
       " P remote.pushDefault []                                                        ",
-      " b neogit.baseBranch unset                                                      ",
-      " A neogit.askSetPushDefault [ask|ask-if-unset|never]                            ",
+      " b anvil.baseBranch unset                                                      ",
+      " A anvil.askSetPushDefault [ask|ask-if-unset|never]                            ",
       "                                                                                ",
       " Configure branch creation                                                      ",
       " a s branch.autoSetupMerge [always|true|false|inherit|simple|default:true]      ",
@@ -69,10 +69,10 @@ RSpec.describe "Branch Config Popup", :git, :nvim, :popup do
     # describe "remote.pushDefault" do
     # end
 
-    # describe "neogit.baseBranch" do
+    # describe "anvil.baseBranch" do
     # end
 
-    # describe "neogit.askSetPushDefault" do
+    # describe "anvil.askSetPushDefault" do
     # end
   end
 
