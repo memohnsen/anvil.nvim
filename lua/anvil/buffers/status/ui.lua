@@ -42,6 +42,13 @@ local HINT = Component.new(function(props)
 
   local entry = function(name, hint)
     local keys = reversed_status_map[name] or reversed_popup_map[name]
+    -- Hide "za" for the toggle action so the hint just shows <tab>, matching
+    -- the help popup
+    if name == "Toggle" and keys then
+      keys = vim.tbl_filter(function(key)
+        return key ~= "za"
+      end, keys)
+    end
     local key_hint
 
     if keys and #keys > 0 then

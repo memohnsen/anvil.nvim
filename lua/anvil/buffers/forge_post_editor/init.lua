@@ -85,6 +85,7 @@ function M:open(kind)
     name = ("AnvilForgePost://%s/%d"):format(self.title:gsub("%s+", "-"), vim.uv.hrtime()),
     filetype = "markdown",
     kind = kind or "split",
+    buftype = "acwrite", -- so :w fires BufWriteCmd (submit) instead of E382
     modifiable = true,
     readonly = false,
     disable_line_numbers = config.values.disable_line_numbers,
@@ -97,6 +98,20 @@ function M:open(kind)
     initialize = function(buffer)
       buffer:set_lines(0, -1, false, initial)
       buffer:move_cursor(1)
+    end,
+    after = function(buffer)
+      local submit = mapping["Submit"] and mapping["Submit"][1]
+      local abort = mapping["Abort"] and mapping["Abort"][1]
+      local hints = {}
+      if submit then
+        table.insert(hints, ("%s Submit"):format(submit))
+      end
+      if abort then
+        table.insert(hints, ("%s Abort"):format(abort))
+      end
+      if #hints > 0 then
+        buffer:set_header(table.concat(hints, " | "), false)
+      end
     end,
     mappings = {
       i = {
