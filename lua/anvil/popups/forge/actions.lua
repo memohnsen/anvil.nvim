@@ -370,7 +370,7 @@ function M.list_issues(_)
 
   local issue = pick_topic("issues", "Issue")
   if issue then
-    forge.browse_topic(issue)
+    require("anvil.buffers.forge_topic_view").new(issue):open()
   end
 end
 
@@ -381,7 +381,7 @@ function M.list_pullreqs(_)
 
   local pullreq = pick_topic("pullreqs", "Pull request")
   if pullreq then
-    forge.browse_topic(pullreq)
+    require("anvil.buffers.forge_topic_view").new(pullreq):open()
   end
 end
 
@@ -418,7 +418,7 @@ function M.list_topics(_)
   })
 
   if topic then
-    forge.browse_topic(topic.topic)
+    require("anvil.buffers.forge_topic_view").new(topic.topic):open()
   end
 end
 

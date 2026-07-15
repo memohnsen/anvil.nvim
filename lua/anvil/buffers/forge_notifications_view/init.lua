@@ -54,6 +54,50 @@ function M:item_at_cursor()
   return self.line_items[vim.fn.line(".")]
 end
 
+---Open the current repository's matching locally synced topic in Anvil.
+function M:open_topic()
+  local item = self:item_at_cursor()
+  if not item then
+    return
+  end
+
+  local url = item.url or ""
+  local kind, number
+  number = url:match("/issues/(%d+)$")
+  if number then
+    kind = "issue"
+  else
+    number = url:match("/pulls/(%d+)$")
+    if number then
+      kind = "pullreq"
+    else
+      number = url:match("/discussions/(%d+)$")
+      if number then
+        kind = "discussion"
+      end
+    end
+  end
+  number = tonumber(number)
+
+  if not number then
+    notification.warn("Forge: this notification does not reference an openable topic")
+    return
+  end
+
+  local topics = require("anvil.forge").topics()
+  local group = kind == "pullreq" and topics.pullreqs or kind == "discussion" and topics.discussions or topics.issues
+  local topic = vim.tbl_filter(function(candidate)
+    return candidate.number == number
+  end, group or {})[1]
+
+  if not topic then
+    notification.warn("Forge: topic is not in the local store. Pull forge topics first.")
+    return
+  end
+
+  require("anvil.buffers.forge_topic_view").new(topic):open()
+end
+
 ---Toggles between the flat list and forge's repository-grouped (nested) style.
 function M:toggle_grouping()
   self.grouped = not self.grouped
@@ -173,6 +217,9 @@ function M:open(kind)
     disable_line_numbers = true,
     mappings = {
       n = {
+        ["<cr>"] = function()
+          self:open_topic()
+        end,
         ["o"] = function()
           local item = self:item_at_cursor()
           local url = item and (item.latest_comment_url or item.url)

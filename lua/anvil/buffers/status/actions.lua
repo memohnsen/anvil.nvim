@@ -1705,29 +1705,19 @@ end
 ---@param self StatusBuffer
 ---@return fun(): nil
 M.n_open_tree = function(self)
-  return a.void(function()
-    if not vim.ui.open then
-      notification.warn("Requires Neovim >= 0.10")
+  return function()
+    local commit = self.buffer.ui:get_commit_under_cursor()
+    if not commit then
+      commit = git.branch.current()
+    end
+
+    if not commit then
+      notification.warn("Couldn't determine a commit to open")
       return
     end
 
-    local commit = self.buffer.ui:get_commit_under_cursor()
-    local branch = git.branch.current()
-    local url
-
-    if commit then
-      url = git.remote.commit_url(commit)
-    elseif branch then
-      url = git.remote.tree_url(branch)
-    end
-
-    if url then
-      notification.info(("Opening %q in your browser."):format(url))
-      vim.ui.open(url)
-    else
-      notification.warn("Couldn't determine commit URL to open")
-    end
-  end)
+    require("anvil.buffers.commit_view").new(commit):open()
+  end
 end
 
 ---@param self StatusBuffer|nil
