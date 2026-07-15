@@ -30,7 +30,7 @@ Open the forge popup with `N` from any Anvil buffer (or `:Anvil forge`):
 | `b P` | Browse pull requests on the web                             |
 | `b r` | Browse repository on the web                                |
 | `b b` | Browse current branch on the web                            |
-| `l t` | List topics (picker), open selection in browser             |
+| `l t` | List topics (picker), open selection in an Anvil buffer     |
 | `l d` | List discussions in a Anvil buffer                         |
 | `l n` | List notifications in a Anvil buffer                       |
 | `b f` | Checkout a pull request branch (`gh pr checkout`)           |
@@ -68,10 +68,10 @@ submit mapping. Use `C` to react to a numbered topic comment and `I` to react to
 review-thread comment. Suggested changes in review comments are listed in the topic buffer; use
 `S` to apply a numbered suggestion to the local worktree.
 
-Notification buffers support `r` mark read, `u` mark unread, `s` save/unsave, `d` mark
-done, `g` refresh, `A`/`U`/`S`/`D` filter all/unread/saved/done, `t` toggle the
-repository-grouped (nested) style, and `o` open the
-notification target. Read/unread/save/done state is stored locally;
+Notification buffers support `<cr>` to open a locally synced topic, `r` mark read, `u`
+mark unread, `s` save/unsave, `d` mark done, `g` refresh, `A`/`U`/`S`/`D` filter
+all/unread/saved/done, `t` toggle the repository-grouped (nested) style, and `o` to
+explicitly open the notification URL. Read/unread/save/done state is stored locally;
 mark-read also updates GitHub when `gh` is available and authenticated.
 See [PLAN.md](../PLAN.md).
 

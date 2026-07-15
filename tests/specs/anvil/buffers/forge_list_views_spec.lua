@@ -107,6 +107,36 @@ describe("Forge list views", function()
     view.buffer:close(true)
   end)
 
+  it("opens a locally synced notification topic in an Anvil buffer", function()
+    local forge = require("anvil.forge")
+    local topic_view = require("anvil.buffers.forge_topic_view")
+    local original_topics = forge.topics
+    local original_new = topic_view.new
+    local opened
+    local topic = { kind = "issue", number = 7, title = "Local issue" }
+    local view = require("anvil.buffers.forge_notifications_view").new({
+      { id = "n1", repository = "owner/repo", title = "Local issue", url = "https://api.github.com/repos/owner/repo/issues/7" },
+    })
+
+    forge.topics = function()
+      return { issues = { topic }, pullreqs = {}, discussions = {} }
+    end
+    topic_view.new = function(selected)
+      opened = selected
+      return { open = function() end }
+    end
+
+    view:open("split")
+    view.buffer:move_cursor(5)
+    view:open_topic()
+
+    assert.are.same(topic, opened)
+
+    view.buffer:close(true)
+    forge.topics = original_topics
+    topic_view.new = original_new
+  end)
+
   it("filters notification views", function()
     local view = require("anvil.buffers.forge_notifications_view").new({
       { id = "n1", unread = true, reason = "mention", repository = "owner/repo", title = "Unread" },

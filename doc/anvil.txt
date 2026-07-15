@@ -1779,15 +1779,16 @@ review-thread comment. Suggested changes in review comments are listed in the
 topic buffer; use `S` to apply a numbered suggestion to the local worktree.
 
   • List topics (l t)                                        *anvil_forge_list*
-    Select an issue or pull request with a picker; opens the selection in the
-    browser. Pressing <cr> on a status-buffer topic opens a local topic buffer.
+    Select a topic with a picker; opens the selection in a local topic buffer.
+    Pressing <cr> on a status-buffer topic does the same.
 
   • List notifications (l n)                    *anvil_forge_notifications*
-    Opens the notification list buffer. In that buffer, use `r` to mark read,
-    `u` to mark unread, `s` to save or unsave, `d` to mark done, and `o` to
-    open the notification target. Use `g` to refresh, and `A`/`U`/`S`/`D` to
-    filter all/unread/saved/done notifications. Use `t` to toggle forge's
-    repository-grouped (nested) style. Read/unread/save/done state is
+    Opens the notification list buffer. In that buffer, use `<cr>` to open a
+    locally synced topic, `r` to mark read, `u` to mark unread, `s` to save or
+    unsave, `d` to mark done, and `o` to explicitly open the notification URL.
+    Use `g` to refresh, and `A`/`U`/`S`/`D` to filter all/unread/saved/done
+    notifications. Use `t` to toggle forge's repository-grouped (nested)
+    style. Read/unread/save/done state is
     stored locally; mark-read also updates GitHub when `gh` is available and
     authenticated.
     Notification polling is opt-in with:
