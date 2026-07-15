@@ -1729,10 +1729,16 @@ Actions:                                            *anvil_forge_popup_actions*
     local store, then refreshes the status buffer. Emits `AnvilForgePulled`.
 
   • Create issue (c i)                                *anvil_forge_create_issue*
-    Opens the browser on the new-issue page for the repository.
+    Prompts for a title, then opens an in-editor Markdown composer. Submit it
+    to create the issue through `gh issue create`.
 
   • Create pull request (c p)                      *anvil_forge_create_pullreq*
-    Runs `gh pr create --web`.
+    Prompts for a title, then opens an in-editor Markdown composer. Submit it
+    to create the pull request through `gh pr create`.
+
+  • Create discussion (c d)
+    Select a discussion category, provide a title, then write the body in an
+    in-editor Markdown composer.
 
   • Browse issues / pull requests / repo / branch (b I, b P, b r, b b)
     Opens the corresponding page on the web.               *anvil_forge_browse*

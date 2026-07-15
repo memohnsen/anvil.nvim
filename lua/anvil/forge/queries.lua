@@ -347,6 +347,28 @@ mutation($discussionId: ID!) {
   }
 }]]
 
+M.discussion_categories = [[
+query($owner: String!, $name: String!) {
+  repository(owner: $owner, name: $name) {
+    id
+    discussionCategories(first: 100) {
+      nodes {
+        id
+        name
+      }
+    }
+  }
+}]]
+
+M.create_discussion = [[
+mutation($repositoryId: ID!, $categoryId: ID!, $title: String!, $body: String!) {
+  createDiscussion(input: {repositoryId: $repositoryId, categoryId: $categoryId, title: $title, body: $body}) {
+    discussion {
+      id
+    }
+  }
+}]]
+
 M.add_reaction = [[
 mutation($subjectId: ID!, $content: ReactionContent!) {
   addReaction(input: {subjectId: $subjectId, content: $content}) {

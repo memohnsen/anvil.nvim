@@ -52,6 +52,57 @@ describe("forge topic actions", function()
     assert.are.same({ "gh", "pr", "comment", "12", "--body", "pr body" }, calls[2])
   end)
 
+  it("creates issues with gh", function()
+    local call
+    client.command = function(args, cb)
+      call = args
+      cb(true)
+    end
+
+    forge.create_issue("A clear title", "Issue body", function(success)
+      assert.True(success)
+    end)
+
+    assert.are.same({ "gh", "issue", "create", "--title", "A clear title", "--body", "Issue body" }, call)
+  end)
+
+  it("creates pull requests with gh without opening a browser", function()
+    local call
+    client.command = function(args, cb)
+      call = args
+      cb(true)
+    end
+
+    forge.create_pullreq("A clear title", "Pull request body", function(success)
+      assert.True(success)
+    end)
+
+    assert.are.same({ "gh", "pr", "create", "--title", "A clear title", "--body", "Pull request body" }, call)
+  end)
+
+  it("loads discussion categories and creates a discussion with GraphQL", function()
+    local calls = {}
+    client.graphql = function(query, variables, cb)
+      table.insert(calls, { query = query, variables = variables })
+      if query == require("anvil.forge.queries").discussion_categories then
+        cb({ repository = { id = "R_123", discussionCategories = { nodes = { { id = "DC_123", name = "Ideas" } } } } })
+      else
+        cb({}, nil)
+      end
+    end
+    client.get_repo = function()
+      return { owner = "owner", name = "repo" }
+    end
+
+    forge.discussion_categories(function(categories)
+      assert.are.same("R_123", categories[1].repository_id)
+      forge.create_discussion(categories[1], "A clear title", "Discussion body")
+    end)
+
+    assert.are.same({ owner = "owner", name = "repo" }, calls[1].variables)
+    assert.are.same({ repositoryId = "R_123", categoryId = "DC_123", title = "A clear title", body = "Discussion body" }, calls[2].variables)
+  end)
+
   it("edits topic title, labels, body, assignees, milestone, and state with gh", function()
     local calls = {}
     client.command = function(args, cb)

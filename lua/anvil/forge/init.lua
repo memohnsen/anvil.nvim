@@ -1055,6 +1055,132 @@ local function command_topic(topic, args, cb)
   client.command(args, cb)
 end
 
+---@param title string
+---@param body string
+---@param cb fun(success: boolean, err: string|nil)|nil
+function M.create_issue(title, body, cb)
+  cb = cb or function() end
+
+  if not title or title == "" then
+    cb(false, "missing title")
+    return
+  end
+
+  if not client.available() then
+    notification.warn("Forge: 'gh' executable not found")
+    cb(false, "gh not found")
+    return
+  end
+
+  if not client.authed() then
+    notification.warn("Forge: not authenticated with GitHub. Run 'gh auth login'")
+    cb(false, "not authenticated")
+    return
+  end
+
+  client.command({ "gh", "issue", "create", "--title", title, "--body", body }, cb)
+end
+
+---@param title string
+---@param body string
+---@param cb fun(success: boolean, err: string|nil)|nil
+function M.create_pullreq(title, body, cb)
+  cb = cb or function() end
+
+  if not title or title == "" then
+    cb(false, "missing title")
+    return
+  end
+
+  if not client.available() then
+    notification.warn("Forge: 'gh' executable not found")
+    cb(false, "gh not found")
+    return
+  end
+
+  if not client.authed() then
+    notification.warn("Forge: not authenticated with GitHub. Run 'gh auth login'")
+    cb(false, "not authenticated")
+    return
+  end
+
+  client.command({ "gh", "pr", "create", "--title", title, "--body", body }, cb)
+end
+
+---@param cb fun(categories: table[]|nil, err: string|nil)
+function M.discussion_categories(cb)
+  if not client.available() then
+    notification.warn("Forge: 'gh' executable not found")
+    cb(nil, "gh not found")
+    return
+  end
+
+  if not client.authed() then
+    notification.warn("Forge: not authenticated with GitHub. Run 'gh auth login'")
+    cb(nil, "not authenticated")
+    return
+  end
+
+  local repo = client.get_repo()
+  if not repo then
+    cb(nil, "no GitHub remote found for this repository")
+    return
+  end
+
+  client.graphql(queries.discussion_categories, { owner = repo.owner, name = repo.name }, function(data, err)
+    local repository = data and data.repository
+    if err or not repository then
+      cb(nil, err or "repository not found")
+      return
+    end
+
+    local categories = repository.discussionCategories and repository.discussionCategories.nodes or {}
+    for _, category in ipairs(categories) do
+      category.repository_id = repository.id
+    end
+    cb(categories)
+  end)
+end
+
+---@param category table
+---@param title string
+---@param body string
+---@param cb fun(success: boolean, err: string|nil)|nil
+function M.create_discussion(category, title, body, cb)
+  cb = cb or function() end
+
+  if not category or not category.id or not category.repository_id then
+    cb(false, "missing discussion category")
+    return
+  end
+
+  if not title or title == "" then
+    cb(false, "missing title")
+    return
+  end
+
+  if not client.available() then
+    notification.warn("Forge: 'gh' executable not found")
+    cb(false, "gh not found")
+    return
+  end
+
+  if not client.authed() then
+    notification.warn("Forge: not authenticated with GitHub. Run 'gh auth login'")
+    cb(false, "not authenticated")
+    return
+  end
+
+  client.graphql(queries.create_discussion, {
+    repositoryId = category.repository_id,
+    categoryId = category.id,
+    title = title,
+    body = body,
+  }, function(_, err)
+    cb(err == nil, err)
+  end)
+end
+
 --- Run a GraphQL mutation against a discussion topic, using its node id.
 ---@param topic table
 ---@param query string
