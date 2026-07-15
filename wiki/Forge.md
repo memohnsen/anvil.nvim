@@ -23,8 +23,9 @@ Open the forge popup with `N` from any Anvil buffer (or `:Anvil forge`):
 | `f f` | Pull open PRs, issues, and discussions into the local store  |
 | `f n` | Pull GitHub notifications into the local store               |
 | `f u` | Pull upstream topics into the local store (fork repos only)  |
-| `c i` | Create issue (opens browser)                                |
-| `c p` | Create pull request (`gh pr create --web`)                  |
+| `c i` | Create issue (in-editor Markdown composer)                  |
+| `c p` | Create pull request (in-editor Markdown composer)           |
+| `c d` | Create discussion (in-editor Markdown composer)             |
 | `b I` | Browse issues on the web                                    |
 | `b P` | Browse pull requests on the web                             |
 | `b r` | Browse repository on the web                                |

@@ -172,13 +172,36 @@ function M.pull_notifications(_)
 end
 
 function M.create_issue(_)
-  local base = forge.repo_url()
-  if not base then
-    notification.warn("Forge: no GitHub remote found for this repository")
+  if not gh_repo() then
     return
   end
 
-  open_url(base .. "/issues/new")
+  local title = input.get_user_input("Issue title")
+  if not title or title == "" then
+    return
+  end
+
+  require("anvil.buffers.forge_post_editor")
+    .new {
+      title = "Create issue: " .. title,
+      require_body = false,
+      on_submit = function(body, done)
+        forge.create_issue(title, body, function(success, err)
+          if success then
+            notification.info("Forge issue created; refreshing topics...")
+            forge.pull(function(pulled, pull_err)
+              if pulled then
+                notification.info("Forge issue created")
+              else
+                notification.warn("Forge issue created, but refreshing topics failed: " .. (pull_err or "unknown error"))
+              end
+            end)
+          end
+          done(success, err)
+        end)
+      end,
+    }
+    :open("split")
 end
 
 function M.create_pull_request(_)
@@ -186,17 +209,89 @@ function M.create_pull_request(_)
     return
   end
 
-  run_gh { "gh", "pr", "create", "--web" }
-end
-
-function M.create_discussion(_)
-  local base = forge.repo_url()
-  if not base then
-    notification.warn("Forge: no GitHub remote found for this repository")
+  local title = input.get_user_input("Pull request title")
+  if not title or title == "" then
     return
   end
 
-  open_url(base .. "/discussions/new/choose")
+  require("anvil.buffers.forge_post_editor")
+    .new {
+      title = "Create pull request: " .. title,
+      require_body = false,
+      on_submit = function(body, done)
+        forge.create_pullreq(title, body, function(success, err)
+          if success then
+            notification.info("Forge pull request created; refreshing topics...")
+            forge.pull(function(pulled, pull_err)
+              if pulled then
+                notification.info("Forge pull request created")
+              else
+                notification.warn("Forge pull request created, but refreshing topics failed: " .. (pull_err or "unknown error"))
+              end
+            end)
+          end
+          done(success, err)
+        end)
+      end,
+    }
+    :open("split")
+end
+
+function M.create_discussion(_)
+  if not gh_repo() then
+    return
+  end
+
+  forge.discussion_categories(function(categories, err)
+    if not categories then
+      notification.error("Forge: failed to load discussion categories: " .. (err or "unknown error"))
+      return
+    end
+    if #categories == 0 then
+      notification.warn("Forge: this repository has no discussion categories")
+      return
+    end
+
+    vim.ui.select(categories, {
+      prompt = "Discussion category",
+      format_item = function(category)
+        return category.name
+      end,
+    }, function(category)
+      if not category then
+        return
+      end
+
+      local title = input.get_user_input("Discussion title")
+      if not title or title == "" then
+        return
+      end
+
+      require("anvil.buffers.forge_post_editor")
+        .new {
+          title = "Create discussion: " .. title,
+          require_body = false,
+          on_submit = function(body, done)
+            forge.create_discussion(category, title, body, function(success, create_err)
+              if success then
+                notification.info("Forge discussion created; refreshing topics...")
+                forge.pull(function(pulled, pull_err)
+                  if pulled then
+                    notification.info("Forge discussion created")
+                  else
+                    notification.warn(
+                      "Forge discussion created, but refreshing topics failed: " .. (pull_err or "unknown error")
+                    )
+                  end
+                end)
+              end
+              done(success, create_err)
+            end)
+          end,
+        }
+        :open("split")
+    end)
+  end)
 end
 
 function M.comment_topic(_)

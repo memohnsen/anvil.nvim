@@ -12,6 +12,7 @@ function M.new(opts)
   return setmetatable({
     title = opts.title or "Forge Post",
     initial = opts.initial or "",
+    require_body = opts.require_body ~= false,
     on_submit = opts.on_submit or function(_, cb)
       cb(true)
     end,
@@ -40,7 +41,7 @@ function M:submit()
   end
 
   local body = self:body()
-  if body == "" then
+  if self.require_body and body == "" then
     notification.warn("Forge: empty post body")
     return
   end
@@ -100,11 +101,16 @@ function M:open(kind)
       buffer:move_cursor(1)
     end,
     after = function(buffer)
-      local submit = mapping["Submit"] and mapping["Submit"][1]
-      local abort = mapping["Abort"] and mapping["Abort"][1]
+      -- Display "<c-c>" style mappings as "<C-c>" so the Ctrl modifier reads as caps
+      local function display_key(key)
+        return key and key:gsub("<c%-", "<C-") or nil
+      end
+
+      local submit = display_key(mapping["Submit"] and mapping["Submit"][1])
+      local abort = display_key(mapping["Abort"] and mapping["Abort"][1])
       local hints = {}
       if submit then
-        table.insert(hints, ("%s Submit"):format(submit))
+        table.insert(hints, ("%s or :w Submit"):format(submit))
       end
       if abort then
         table.insert(hints, ("%s Abort"):format(abort))
