@@ -532,44 +532,74 @@ function M:mappings()
     end
   end
 
+  -- Multi-key actions must not rely on Neovim's mapping timeout. In
+  -- particular, letting `V` time out before `Vs` puts a popup into Visual Line
+  -- mode; the next key then attempts to edit its deliberately read-only buffer.
+  -- Dispatch prefixes ourselves so every chord waits for its next key.
+  local action_mappings = {}
+  local action_prefixes = {}
+
   for _, group in pairs(self.state.actions) do
     for _, action in pairs(group) do
-      -- selene: allow(empty_if)
-      if action.heading then
-        -- nothing
-      elseif action.callback then
+      if not action.heading and action.keys then
         for _, key in ipairs(action.keys) do
-          mappings.n[key] = a.void(function()
-            -- Capture the numeric prefix (Neovim's analog of magit's `C-u`)
-            -- synchronously before any await or close, so actions can branch on
-            -- it via `popup:get_prefix()` / `popup:has_prefix()`.
-            self.state.prefix = vim.v.count
+          if action.callback then
+            action_mappings[key] = a.void(function()
+              -- Capture the numeric prefix (Neovim's analog of magit's `C-u`)
+              -- synchronously before any await or close, so actions can branch on
+              -- it via `popup:get_prefix()` / `popup:has_prefix()`.
+              self.state.prefix = vim.v.count
 
-            logger.debug(string.format("[POPUP]: Invoking action %q of %s", key, self.state.name))
-            if not action.persist_popup then
-              logger.debug("[POPUP]: Closing popup")
-              self:close()
+              logger.debug(string.format("[POPUP]: Invoking action %q of %s", key, self.state.name))
+              if not action.persist_popup then
+                logger.debug("[POPUP]: Closing popup")
+                self:close()
+              end
+
+              local permit = M.__lock:acquire()
+              self:record_history()
+              local ok, err = pcall(action.callback, self)
+              permit:forget()
+
+              if not ok then
+                logger.error(("[POPUP] %s failed: %s"):format(key, err))
+              end
+
+              Watcher.instance():dispatch_refresh()
+            end)
+          else
+            action_mappings[key] = function()
+              notification.warn(action.description .. " has not been implemented yet")
             end
+          end
 
-            local permit = M.__lock:acquire()
-            self:record_history()
-            local ok, err = pcall(action.callback, self)
-            permit:forget()
-
-            if not ok then
-              logger.error(("[POPUP] %s failed: %s"):format(key, err))
-            end
-
-            Watcher.instance():dispatch_refresh()
-          end)
-        end
-      else
-        for _, key in ipairs(action.keys) do
-          mappings.n[key] = function()
-            notification.warn(action.description .. " has not been implemented yet")
+          for i = 1, #key - 1 do
+            action_prefixes[key:sub(1, i)] = true
           end
         end
       end
+    end
+  end
+
+  local function dispatch_action(prefix)
+    local suffix = vim.fn.getcharstr()
+    local key = prefix .. suffix
+    if action_mappings[key] then
+      action_mappings[key]()
+    elseif action_prefixes[key] then
+      dispatch_action(key)
+    end
+  end
+
+  for key, callback in pairs(action_mappings) do
+    if #key == 1 and not action_prefixes[key] then
+      mappings.n[key] = callback
+    end
+  end
+
+  for prefix, _ in pairs(action_prefixes) do
+    mappings.n[prefix] = function()
+      dispatch_action(prefix)
     end
   end
 
