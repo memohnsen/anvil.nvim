@@ -388,6 +388,15 @@ mutation($pullRequestId: ID!, $body: String, $event: PullRequestReviewEvent, $co
   }
 }]]
 
+M.mark_file_as_viewed = [[
+mutation($path: String!, $pullRequestId: ID!) {
+  markFileAsViewed(input: {path: $path, pullRequestId: $pullRequestId}) {
+    pullRequest {
+      id
+    }
+  }
+}]]
+
 ---Detailed query for one issue, including body and comments.
 M.issue_detail = ([[
 query($owner: String!, $name: String!, $number: Int!) {

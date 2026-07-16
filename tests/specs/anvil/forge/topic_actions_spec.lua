@@ -215,6 +215,21 @@ describe("forge topic actions", function()
     assert.are.same({}, forge.pending_review_comments(topic))
   end)
 
+  it("marks a pull request file as viewed with GraphQL", function()
+    local call
+    client.graphql = function(query, variables, cb)
+      call = { query = query, variables = variables }
+      cb({}, nil)
+    end
+
+    forge.mark_pullreq_file_viewed({ kind = "pullreq", id = "PR_kwDO", number = 42 }, "lua/anvil/forge/review.lua", function(success)
+      assert.True(success)
+    end)
+
+    assert.True(call.query:find("markFileAsViewed", 1, true) ~= nil)
+    assert.are.same({ pullRequestId = "PR_kwDO", path = "lua/anvil/forge/review.lua" }, call.variables)
+  end)
+
   it("updates local topic marks through the forge API", function()
     local repo = { host = "github.com", owner = "anvil-test", name = "topic-mark-actions" }
     client.get_repo = function()

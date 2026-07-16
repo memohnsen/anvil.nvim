@@ -30,6 +30,11 @@ describe("forge review targeting", function()
     assert.are.same({ path = "lua/old.lua", line = 10, side = "LEFT" }, left)
   end)
 
+  it("adds a return-to-Anvil hint to the Diffview file panel help", function()
+    assert.are.equal("g? • V: Viewed • q: Anvil", review.file_panel_help_hint("g?"))
+    assert.are.equal("g? • V: Viewed • q: Anvil", review.file_panel_help_hint(nil))
+  end)
+
   it("errors when there is no view or file entry", function()
     local target, err = review.target_from_view(nil, 1, 1)
     assert.is_nil(target)
@@ -38,6 +43,81 @@ describe("forge review targeting", function()
     target, err = review.target_from_view({}, 1, 1)
     assert.is_nil(target)
     assert.is_truthy(err)
+  end)
+
+  it("removes a reviewed file from the Diffview tree and selects the next file", function()
+    local first = { path = "first.lua", destroy = function() end }
+    local second = { path = "second.lua" }
+    local selected
+    local view = {
+      files = {
+        conflicting = {},
+        working = { first, second },
+        staged = {},
+        update_file_trees = function() end,
+      },
+      panel = {
+        ordered_file_list = function()
+          return { first, second }
+        end,
+        update_components = function() end,
+        render = function() end,
+        redraw = function() end,
+        reconstrain_cursor = function() end,
+        set_cur_file = function(_, file)
+          selected = file
+        end,
+      },
+      set_file = function(_, file)
+        selected = file
+      end,
+    }
+
+    assert.is_true(review.hide_reviewed_file(view, first))
+    assert.are.same({ second }, view.files.working)
+    assert.are.equal(second, selected)
+  end)
+
+  it("clears the active entry before removing the last reviewed file", function()
+    local detached = false
+    local safeguarded = false
+    local only = {
+      path = "only.lua",
+      layout = { detach_files = function() detached = true end },
+      destroy = function() end,
+    }
+    local panel = {
+      cur_file = only,
+      ordered_file_list = function()
+        return { only }
+      end,
+      set_cur_file = function(self, file)
+        self.cur_file = file
+      end,
+      update_components = function() end,
+      render = function() end,
+      redraw = function() end,
+      reconstrain_cursor = function() end,
+    }
+    local view = {
+      cur_entry = only,
+      files = {
+        conflicting = {},
+        working = { only },
+        staged = {},
+        update_file_trees = function() end,
+      },
+      panel = panel,
+      file_safeguard = function()
+        safeguarded = true
+      end,
+    }
+
+    assert.is_true(review.hide_reviewed_file(view, only))
+    assert.is_nil(view.cur_entry)
+    assert.is_nil(panel.cur_file)
+    assert.is_true(detached)
+    assert.is_true(safeguarded)
   end)
 
   it("queues a pending comment through the review topic", function()

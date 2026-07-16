@@ -362,6 +362,27 @@ function M.submit_pullreq_review(topic, event_name, body, cb)
   )
 end
 
+---@param topic table
+---@param path string
+---@param cb fun(success: boolean, err: string|nil)|nil
+function M.mark_pullreq_file_viewed(topic, path, cb)
+  cb = cb or function() end
+
+  if type(path) ~= "string" or path == "" then
+    cb(false, "missing file path")
+    return
+  end
+
+  local id = pull_request_id(topic, cb)
+  if not id then
+    return
+  end
+
+  client.graphql(queries.mark_file_as_viewed, { pullRequestId = id, path = path }, function(_, err)
+    cb(err == nil, err)
+  end)
+end
+
 local function thread_id(thread, cb)
   if not thread or not thread.id then
     cb(false, "missing review thread id")

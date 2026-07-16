@@ -151,6 +151,8 @@ function M.open(section_name, item_name, opts)
   if view then
     view:open()
   end
+
+  return view
 end
 
 return M

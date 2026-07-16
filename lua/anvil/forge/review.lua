@@ -107,6 +107,143 @@ local function current_diff_view()
   return view
 end
 
+---@param help_mapping string|nil
+---@return string
+function M.file_panel_help_hint(help_mapping)
+  return (help_mapping or "g?") .. " • V: Viewed • q: Anvil"
+end
+
+---@param buffer integer|nil
+---@param view table
+local function map_review_buffer(buffer, view)
+  if not buffer or not api.nvim_buf_is_valid(buffer) then
+    return
+  end
+
+  vim.keymap.set("n", "V", function()
+    M.mark_current_file_viewed(function(success, err)
+      if success then
+        notify().info("Forge: marked file as viewed")
+      else
+        notify().error("Forge: " .. (err or "failed to mark file as viewed"))
+      end
+    end)
+  end, { buffer = buffer, silent = true, nowait = true, desc = "Mark file viewed" })
+
+  vim.keymap.set("n", "q", function()
+    view:close()
+  end, { buffer = buffer, silent = true, nowait = true, desc = "Return to Anvil" })
+end
+
+---@param view table|nil
+local function add_review_mappings(view)
+  local panel = view and view.panel
+  if not panel or not panel.bufid or not api.nvim_buf_is_valid(panel.bufid) then
+    return
+  end
+
+  map_review_buffer(panel.bufid, view)
+  for _, side in ipairs({ "a", "b", "c", "d" }) do
+    local file = view.cur_layout and view.cur_layout[side] and view.cur_layout[side].file
+    map_review_buffer(file and file.bufnr, view)
+  end
+
+  if not panel.anvil_review_help_configured then
+    panel.help_mapping = M.file_panel_help_hint(panel.help_mapping)
+    panel.anvil_review_help_configured = true
+    panel:render()
+    panel:redraw()
+  end
+end
+
+---Removes a reviewed entry from Diffview's current file list and selects the
+---next remaining file. Kept separate from the GitHub mutation for testability.
+---@param view table
+---@param entry table
+---@return boolean
+function M.hide_reviewed_file(view, entry)
+  if not view or not entry or not view.files or not view.panel then
+    return false
+  end
+
+  local files = view.files
+  local panel = view.panel
+  local ordered = panel.ordered_file_list and panel:ordered_file_list() or {}
+  local index
+  for i, file in ipairs(ordered) do
+    if file == entry then
+      index = i
+      break
+    end
+  end
+
+  local replacement
+  if index and #ordered > 1 then
+    replacement = ordered[(index % #ordered) + 1]
+  end
+
+  local removed = false
+  for _, kind in ipairs({ "conflicting", "working", "staged" }) do
+    local entries = files[kind]
+    if entries then
+      for i, file in ipairs(entries) do
+        if file == entry then
+          table.remove(entries, i)
+          removed = true
+          break
+        end
+      end
+    end
+    if removed then
+      break
+    end
+  end
+
+  if not removed then
+    return false
+  end
+
+  if not replacement then
+    if panel.set_cur_file then
+      panel:set_cur_file(nil)
+    end
+    if view.cur_entry == entry then
+      if entry.layout and entry.layout.detach_files then
+        entry.layout:detach_files()
+      end
+      view.cur_entry = nil
+    end
+  end
+
+  if entry.destroy then
+    entry:destroy()
+  end
+  if files.update_file_trees then
+    files:update_file_trees()
+  end
+  if panel.update_components then
+    panel:update_components()
+  end
+  if panel.render then
+    panel:render()
+  end
+  if panel.redraw then
+    panel:redraw()
+  end
+  if panel.reconstrain_cursor then
+    panel:reconstrain_cursor()
+  end
+
+  if replacement and panel.set_cur_file and view.set_file then
+    panel:set_cur_file(replacement)
+    view:set_file(replacement, true, true)
+  elseif view.file_safeguard then
+    view:file_safeguard()
+  end
+
+  return true
+end
+
 ---Starts reviewing a pull request: records it as the active review topic and
 ---opens its base...head diff in the configured diff viewer.
 ---@param topic table
@@ -123,7 +260,15 @@ function M.start(topic)
   end
 
   M.set_topic(topic)
-  diff_integration().open("range", ("%s...%s"):format(topic.base, topic.head))
+  local view = diff_integration().open("range", ("%s...%s"):format(topic.base, topic.head))
+  if view then
+    vim.schedule(function()
+      add_review_mappings(view)
+      view.emitter:on("file_open_post", function()
+        add_review_mappings(view)
+      end)
+    end)
+  end
   notify().info(("Reviewing #%d — queue comments with the review comment mapping"):format(topic.number))
   return true
 end
@@ -151,6 +296,34 @@ function M.comment_at_cursor(body)
 
   target.body = body
   return forge().add_pending_review_comment(topic, target)
+end
+
+---Marks the current Diffview file as viewed on GitHub and removes it from the
+---review tree after GitHub accepts the update.
+---@param cb fun(success: boolean, err: string|nil)|nil
+function M.mark_current_file_viewed(cb)
+  cb = cb or function() end
+  if not current_topic then
+    cb(false, "no pull request is being reviewed")
+    return
+  end
+
+  local view = current_diff_view()
+  local entry = view and view.cur_entry
+  if not entry or not entry.path or entry.path == "" then
+    cb(false, "no file under review")
+    return
+  end
+
+  forge().mark_pullreq_file_viewed(current_topic, entry.path, function(success, err)
+    if not success then
+      cb(false, err)
+      return
+    end
+
+    M.hide_reviewed_file(view, entry)
+    cb(true, nil)
+  end)
 end
 
 ---Submits the queued review for the active topic.
