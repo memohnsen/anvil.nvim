@@ -66,6 +66,31 @@ describe("popup transient state", function()
     assert.is_true(instance:has_prefix())
   end)
 
+  it("dispatches multi-key actions without relying on mapping timeout", function()
+    local invoked = 0
+    local instance = popup
+      .builder()
+      :name("AnvilChordDispatchSpecPopup")
+      :action("Vs", "start review", function()
+        invoked = invoked + 1
+      end)
+      :build()
+
+    local mappings = instance:mappings()
+    assert.is_function(mappings.n.V)
+    assert.is_nil(mappings.n.Vs)
+
+    local original_getcharstr = vim.fn.getcharstr
+    vim.fn.getcharstr = function()
+      return "s"
+    end
+
+    mappings.n.V()
+    vim.fn.getcharstr = original_getcharstr
+
+    assert.are.equal(1, invoked)
+  end)
+
   it("filters argument suffixes by transient display level (C-x l)", function()
     local ui = require("anvil.lib.popup.ui")
 
