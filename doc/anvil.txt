@@ -1769,7 +1769,9 @@ For diffview-backed reviews, the `N` forge popup Review group offers `V s`
 start a PR review (opens the pull request's `base...head` diff), `V c` queue a
 pending comment on the diff line under the cursor (file path and LEFT/RIGHT side
 are derived from the diff window), and `V S` submit the queued review as
-comment/approve/request-changes.
+comment/approve/request-changes. Inside the Diffview review, `V` marks the
+current file viewed and removes it from the tree; `q` returns to the Anvil tab.
+Both are shown beside Diffview's help hint.
 Pull request topic detail also renders inline review threads with file/line
 context, diff hunks, resolution state, and comments. Use `i` to reply to a
 numbered review thread, `x` to resolve it, and `U` to mark it unresolved.
