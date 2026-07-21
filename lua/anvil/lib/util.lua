@@ -486,6 +486,27 @@ end
 
 local DEFAULT_TIMEOUT = os.getenv("CI") and 0 or 1000
 
+local memoized_caches = {}
+
+---Drop every memoized value. Called when a repository refresh begins so a
+---refresh never renders results cached from before a mutation (e.g. a push
+---finishing inside the TTL window of a pre-push watcher refresh).
+function M.clear_memoized()
+  for _, entry in ipairs(memoized_caches) do
+    for key, t in pairs(entry.timer) do
+      t:stop()
+      if not t:is_closing() then
+        t:close()
+      end
+      entry.timer[key] = nil
+    end
+
+    for key in pairs(entry.cache) do
+      entry.cache[key] = nil
+    end
+  end
+end
+
 ---Memoize a function's result for a set period of time. Value will be forgotten after specified timeout, or 1 second. Timer resets with each call.
 ---@param f function Function to memoize
 ---@param opts table?
@@ -497,6 +518,7 @@ function M.memoize(f, opts)
 
   local cache = {}
   local timer = {}
+  table.insert(memoized_caches, { cache = cache, timer = timer })
 
   return function(...)
     local cwd = vim.uv.cwd()

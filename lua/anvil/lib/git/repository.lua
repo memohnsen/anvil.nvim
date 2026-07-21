@@ -320,6 +320,12 @@ function Repo:refresh(opts)
     self._refresh_task:cancel()
   end
 
+  -- Memoized git queries (log.list, refs, branch info, ...) may hold results
+  -- read before whatever prompted this refresh (a push, a commit, ...).
+  -- Serving them here would render stale state, and a cache hit also resets
+  -- the memoize TTL — so a refresh loop could stay stale indefinitely.
+  util.clear_memoized()
+
   local filter
   if opts.partial and opts.partial.update_diffs then
     filter = ItemFilter.create(opts.partial.update_diffs)
