@@ -448,6 +448,37 @@ end
 
 M.__lock = a.control.Semaphore.new(1)
 
+---Splits a mapping lhs into normalized keycodes ("Vs" -> {"V", "s"},
+---"<c-x>l" -> {"<C-X>", "l"}), so chord prefixes land on real key boundaries
+---instead of raw byte offsets, and so keys read back from `getcharstr()` can be
+---compared after `keytrans()` normalization.
+---@param key string
+---@return string[]
+function M.split_keycodes(key)
+  local codes = {}
+  local i = 1
+  while i <= #key do
+    local segment
+    if key:sub(i, i) == "<" then
+      local close = key:find(">", i + 1, true)
+      if close then
+        segment = key:sub(i, close)
+        i = close + 1
+      end
+    end
+    if not segment then
+      local byte = key:byte(i)
+      local len = (byte < 0x80 and 1) or (byte >= 0xF0 and 4) or (byte >= 0xE0 and 3) or (byte >= 0xC0 and 2) or 1
+      segment = key:sub(i, i + len - 1)
+      i = i + len
+    end
+
+    local ok, raw = pcall(vim.api.nvim_replace_termcodes, segment, true, true, true)
+    table.insert(codes, ok and vim.fn.keytrans(raw) or segment)
+  end
+  return codes
+end
+
 function M:mappings()
   local mappings = {
     n = {
@@ -543,12 +574,18 @@ function M:mappings()
     for _, action in pairs(group) do
       if not action.heading and action.keys then
         for _, key in ipairs(action.keys) do
+          local keycodes = M.split_keycodes(key)
+          local normalized = table.concat(keycodes)
+
           if action.callback then
-            action_mappings[key] = a.void(function()
+            -- `count` is forwarded by the chord dispatcher, which has to read
+            -- `vim.v.count` before waiting for the next key; direct single-key
+            -- invocations pass nothing and read it here.
+            action_mappings[normalized] = a.void(function(count)
               -- Capture the numeric prefix (Neovim's analog of magit's `C-u`)
               -- synchronously before any await or close, so actions can branch on
               -- it via `popup:get_prefix()` / `popup:has_prefix()`.
-              self.state.prefix = vim.v.count
+              self.state.prefix = count or vim.v.count
 
               logger.debug(string.format("[POPUP]: Invoking action %q of %s", key, self.state.name))
               if not action.persist_popup then
@@ -568,38 +605,53 @@ function M:mappings()
               Watcher.instance():dispatch_refresh()
             end)
           else
-            action_mappings[key] = function()
+            action_mappings[normalized] = function()
               notification.warn(action.description .. " has not been implemented yet")
             end
           end
 
-          for i = 1, #key - 1 do
-            action_prefixes[key:sub(1, i)] = true
+          local prefix = ""
+          for i = 1, #keycodes - 1 do
+            prefix = prefix .. keycodes[i]
+            action_prefixes[prefix] = true
           end
         end
       end
     end
   end
 
-  local function dispatch_action(prefix)
-    local suffix = vim.fn.getcharstr()
-    local key = prefix .. suffix
+  local function dispatch_action(prefix, count)
+    -- getcharstr() throws on interrupt (CTRL-C); treat that like <Esc>.
+    local ok, suffix = pcall(vim.fn.getcharstr)
+    if not ok then
+      return
+    end
+
+    local key = prefix .. vim.fn.keytrans(suffix)
     if action_mappings[key] then
-      action_mappings[key]()
+      action_mappings[key](count)
     elseif action_prefixes[key] then
-      dispatch_action(key)
+      dispatch_action(key, count)
     end
   end
 
   for key, callback in pairs(action_mappings) do
-    if #key == 1 and not action_prefixes[key] then
+    if action_prefixes[key] then
+      -- A chord shares this key as its prefix, so the dispatcher below owns the
+      -- mapping and this action can never fire. Surface it instead of silently
+      -- dropping the binding.
+      logger.error(
+        ("[POPUP] %s: action %q is shadowed by longer bindings with the same prefix"):format(self.state.name, key)
+      )
+    elseif #M.split_keycodes(key) == 1 then
       mappings.n[key] = callback
     end
   end
 
   for prefix, _ in pairs(action_prefixes) do
     mappings.n[prefix] = function()
-      dispatch_action(prefix)
+      local count = vim.v.count
+      dispatch_action(prefix, count)
     end
   end
 

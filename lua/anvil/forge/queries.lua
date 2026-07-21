@@ -397,6 +397,34 @@ mutation($path: String!, $pullRequestId: ID!) {
   }
 }]]
 
+M.unmark_file_as_viewed = [[
+mutation($path: String!, $pullRequestId: ID!) {
+  unmarkFileAsViewed(input: {path: $path, pullRequestId: $pullRequestId}) {
+    pullRequest {
+      id
+    }
+  }
+}]]
+
+---Per-file viewed state for the authenticated viewer on a pull request.
+M.pullreq_viewed_files = [[
+query($owner: String!, $name: String!, $number: Int!, $cursor: String) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      files(first: 100, after: $cursor) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        nodes {
+          path
+          viewerViewedState
+        }
+      }
+    }
+  }
+}]]
+
 ---Detailed query for one issue, including body and comments.
 M.issue_detail = ([[
 query($owner: String!, $name: String!, $number: Int!) {

@@ -91,6 +91,68 @@ describe("popup transient state", function()
     assert.are.equal(1, invoked)
   end)
 
+  it("dispatches three-key chords and cancels on <Esc>", function()
+    local invoked = 0
+    local instance = popup
+      .builder()
+      :name("AnvilChordThreeKeySpecPopup")
+      :action("Vst", "three key action", function()
+        invoked = invoked + 1
+      end)
+      :build()
+
+    local mappings = instance:mappings()
+    assert.is_function(mappings.n.V)
+
+    local original_getcharstr = vim.fn.getcharstr
+    local feed = { "s", "t" }
+    vim.fn.getcharstr = function()
+      return table.remove(feed, 1)
+    end
+    mappings.n.V()
+    assert.are.equal(1, invoked)
+
+    feed = { "\27" }
+    mappings.n.V()
+    vim.fn.getcharstr = original_getcharstr
+
+    -- <Esc> aborted the chord instead of running the action.
+    assert.are.equal(1, invoked)
+  end)
+
+  it("dispatches chords that use special-key notation", function()
+    local invoked = 0
+    local instance = popup
+      .builder()
+      :name("AnvilChordSpecialKeySpecPopup")
+      :action("<c-a>x", "special key chord", function()
+        invoked = invoked + 1
+      end)
+      :build()
+
+    local mappings = instance:mappings()
+    -- The prefix is normalized to keytrans() form and owns the mapping; no
+    -- byte-wise fragments like "<" leak into the mapping table.
+    assert.is_function(mappings.n["<C-A>"])
+    assert.is_nil(mappings.n["<"])
+    assert.is_nil(mappings.n["<c-a>x"])
+
+    local original_getcharstr = vim.fn.getcharstr
+    vim.fn.getcharstr = function()
+      return "x"
+    end
+    mappings.n["<C-A>"]()
+    vim.fn.getcharstr = original_getcharstr
+
+    assert.are.equal(1, invoked)
+  end)
+
+  it("splits mapping keys on keycode boundaries", function()
+    assert.are.same({ "V", "s" }, popup.split_keycodes("Vs"))
+    assert.are.same({ "<C-A>", "x" }, popup.split_keycodes("<c-a>x"))
+    assert.are.same({ "V" }, popup.split_keycodes("V"))
+  end)
+
   it("filters argument suffixes by transient display level (C-x l)", function()
     local ui = require("anvil.lib.popup.ui")
 
