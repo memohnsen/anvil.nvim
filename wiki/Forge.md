@@ -53,9 +53,11 @@ request changes; successful edits refresh the local topic detail.
 For diffview-backed reviews, the `N` forge popup Review group offers `V s` start a PR review
 (opens the pull request's `base...head` diff in your diff viewer), `V c` queue a pending comment
 on the diff line under the cursor (file path and LEFT/RIGHT side are derived from the diff window),
-and `V S` submit the queued review as comment/approve/request-changes. Inside the Diffview review,
-`V` marks the current file viewed on GitHub and removes it from the tree; `q` returns to the Anvil
-tab. Both are shown beside Diffview's help hint.
+and `V S` submit the queued review as comment/approve/request-changes. In the Diffview file panel,
+`V` marks the current file viewed on GitHub and removes it from the tree, `X` unmarks the last
+viewed file and restores it, and `q` returns to the Anvil tab. Files already marked viewed (e.g. in
+the GitHub web UI) are hidden when the review opens, and hides survive Diffview refreshes. The
+controls are shown beside Diffview's help hint and require diffview.nvim as the diff viewer.
 Local Forge topic marks are available with `M` mark read, `u` mark unread, `*` save/unsave,
 and `d` mark done; list and status buffers show `U`/`S`/`D` markers. The `N` forge popup Topic
 group also offers `t N` to set or clear a local freetext note on a topic (forge's topic-notes).

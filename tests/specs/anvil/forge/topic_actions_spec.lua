@@ -230,6 +230,67 @@ describe("forge topic actions", function()
     assert.are.same({ pullRequestId = "PR_kwDO", path = "lua/anvil/forge/review.lua" }, call.variables)
   end)
 
+  it("unmarks a pull request file as viewed with GraphQL", function()
+    local call
+    client.graphql = function(query, variables, cb)
+      call = { query = query, variables = variables }
+      cb({}, nil)
+    end
+
+    forge.unmark_pullreq_file_viewed({ kind = "pullreq", id = "PR_kwDO", number = 42 }, "lua/anvil/forge/review.lua", function(success)
+      assert.True(success)
+    end)
+
+    assert.True(call.query:find("unmarkFileAsViewed", 1, true) ~= nil)
+    assert.are.same({ pullRequestId = "PR_kwDO", path = "lua/anvil/forge/review.lua" }, call.variables)
+  end)
+
+  it("collects viewed file paths across pages", function()
+    client.get_repo = function()
+      return { host = "github.com", owner = "anvil-test", name = "viewed-files" }
+    end
+
+    local cursors = {}
+    client.graphql = function(_, variables, cb)
+      table.insert(cursors, variables.cursor or "first-page")
+      if #cursors == 1 then
+        cb({
+          repository = {
+            pullRequest = {
+              files = {
+                pageInfo = { hasNextPage = true, endCursor = "CUR1" },
+                nodes = {
+                  { path = "a.lua", viewerViewedState = "VIEWED" },
+                  { path = "b.lua", viewerViewedState = "UNVIEWED" },
+                },
+              },
+            },
+          },
+        }, nil)
+      else
+        cb({
+          repository = {
+            pullRequest = {
+              files = {
+                pageInfo = { hasNextPage = false },
+                nodes = { { path = "c.lua", viewerViewedState = "VIEWED" } },
+              },
+            },
+          },
+        }, nil)
+      end
+    end
+
+    local result
+    forge.pullreq_viewed_paths({ kind = "pullreq", number = 42 }, function(paths, err)
+      result = { paths = paths, err = err }
+    end)
+
+    assert.is_nil(result.err)
+    assert.are.same({ "a.lua", "c.lua" }, result.paths)
+    assert.are.same({ "first-page", "CUR1" }, cursors)
+  end)
+
   it("updates local topic marks through the forge API", function()
     local repo = { host = "github.com", owner = "anvil-test", name = "topic-mark-actions" }
     client.get_repo = function()

@@ -31,8 +31,8 @@ describe("forge review targeting", function()
   end)
 
   it("adds a return-to-Anvil hint to the Diffview file panel help", function()
-    assert.are.equal("g? • V: Viewed • q: Anvil", review.file_panel_help_hint("g?"))
-    assert.are.equal("g? • V: Viewed • q: Anvil", review.file_panel_help_hint(nil))
+    assert.are.equal("g? • V: Viewed • X: Unview • q: Anvil", review.file_panel_help_hint("g?"))
+    assert.are.equal("g? • V: Viewed • X: Unview • q: Anvil", review.file_panel_help_hint(nil))
   end)
 
   it("errors when there is no view or file entry", function()
@@ -118,6 +118,102 @@ describe("forge review targeting", function()
     assert.is_nil(panel.cur_file)
     assert.is_true(detached)
     assert.is_true(safeguarded)
+  end)
+
+  it("keeps a hidden entry alive and restores it at its old position", function()
+    local destroyed = false
+    local first = {
+      path = "first.lua",
+      destroy = function()
+        destroyed = true
+      end,
+    }
+    local second = { path = "second.lua" }
+    local selected
+    local view = {
+      files = {
+        conflicting = {},
+        working = { first, second },
+        staged = {},
+        update_file_trees = function() end,
+      },
+      panel = {
+        ordered_file_list = function()
+          return { first, second }
+        end,
+        update_components = function() end,
+        render = function() end,
+        redraw = function() end,
+        reconstrain_cursor = function() end,
+        set_cur_file = function(_, file)
+          selected = file
+        end,
+      },
+      set_file = function(_, file)
+        selected = file
+      end,
+    }
+
+    local removed, position = review.hide_reviewed_file(view, first, { keep_entry = true })
+    assert.is_true(removed)
+    assert.is_false(destroyed)
+    assert.are.same({ kind = "working", index = 1 }, position)
+    assert.are.same({ second }, view.files.working)
+
+    assert.is_true(review.restore_hidden_file(view, first, position))
+    assert.are.same({ first, second }, view.files.working)
+    assert.are.equal(first, selected)
+  end)
+
+  it("re-hides files marked viewed when the file list is rebuilt", function()
+    local bufid = vim.api.nvim_create_buf(false, true)
+    local destroyed = {}
+    local function make_entry(path)
+      return {
+        path = path,
+        destroy = function()
+          table.insert(destroyed, path)
+        end,
+      }
+    end
+    local viewed = make_entry("viewed.lua")
+    local fresh = make_entry("fresh.lua")
+    local safeguarded = false
+
+    local view
+    view = {
+      anvil_viewed_paths = { ["viewed.lua"] = true },
+      files = {
+        conflicting = {},
+        working = { viewed, fresh },
+        staged = {},
+        update_file_trees = function() end,
+      },
+      panel = {
+        bufid = bufid,
+        ordered_file_list = function()
+          return view.files.working
+        end,
+        update_components = function() end,
+        render = function() end,
+        redraw = function() end,
+        reconstrain_cursor = function() end,
+        set_cur_file = function() end,
+      },
+      file_safeguard = function()
+        safeguarded = true
+      end,
+    }
+    view.cur_entry = viewed
+
+    review.apply_viewed_paths(view)
+
+    assert.are.same({ fresh }, view.files.working)
+    assert.are.same({ "viewed.lua" }, destroyed)
+    assert.is_nil(view.cur_entry)
+    assert.is_true(safeguarded)
+
+    vim.api.nvim_buf_delete(bufid, { force = true })
   end)
 
   it("queues a pending comment through the review topic", function()

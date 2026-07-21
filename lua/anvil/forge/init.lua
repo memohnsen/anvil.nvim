@@ -383,6 +383,80 @@ function M.mark_pullreq_file_viewed(topic, path, cb)
   end)
 end
 
+---@param topic table
+---@param path string
+---@param cb fun(success: boolean, err: string|nil)|nil
+function M.unmark_pullreq_file_viewed(topic, path, cb)
+  cb = cb or function() end
+
+  if type(path) ~= "string" or path == "" then
+    cb(false, "missing file path")
+    return
+  end
+
+  local id = pull_request_id(topic, cb)
+  if not id then
+    return
+  end
+
+  client.graphql(queries.unmark_file_as_viewed, { pullRequestId = id, path = path }, function(_, err)
+    cb(err == nil, err)
+  end)
+end
+
+---Fetches the paths the authenticated viewer has already marked as viewed on a
+---pull request, following pagination.
+---@param topic table
+---@param cb fun(paths: string[]|nil, err: string|nil)
+function M.pullreq_viewed_paths(topic, cb)
+  if not topic or topic.kind ~= "pullreq" or not topic.number then
+    cb(nil, "unsupported topic kind")
+    return
+  end
+
+  if not client.available() or not client.authed() then
+    cb(nil, "gh unavailable")
+    return
+  end
+
+  local repo = client.get_repo()
+  if not repo then
+    cb(nil, "no GitHub remote")
+    return
+  end
+
+  local paths = {}
+
+  local function fetch(cursor)
+    local variables = { owner = repo.owner, name = repo.name, number = topic.number, cursor = cursor }
+    client.graphql(queries.pullreq_viewed_files, variables, function(data, err)
+      local files = data
+        and data.repository
+        and data.repository.pullRequest
+        and data.repository.pullRequest.files
+      if err or not files then
+        cb(nil, err or "no data")
+        return
+      end
+
+      for _, node in ipairs(files.nodes or {}) do
+        if node.path and node.viewerViewedState == "VIEWED" then
+          table.insert(paths, node.path)
+        end
+      end
+
+      local page = files.pageInfo
+      if page and page.hasNextPage and page.endCursor then
+        fetch(page.endCursor)
+      else
+        cb(paths, nil)
+      end
+    end)
+  end
+
+  fetch(nil)
+end
+
 local function thread_id(thread, cb)
   if not thread or not thread.id then
     cb(false, "missing review thread id")
